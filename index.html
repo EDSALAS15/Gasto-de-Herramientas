@@ -1,0 +1,871 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>GASTO DE HERRAMIENTAS</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+:root{
+  --rojo:#C10230;
+  --gris:#F4F4F4;
+  --azul:#0071C1;
+  --verde:#00B050;
+  --side-w:220px;
+  --side-bg:#333F48;
+  --side-grp:#263038;
+  --side-txt:#ccc;
+}
+*{box-sizing:border-box}
+body{font-family:'Segoe UI',Tahoma,sans-serif;background:var(--gris);margin:0;display:flex;flex-direction:column;min-height:100vh}
+.header-bar{display:flex;align-items:stretch;position:sticky;top:0;z-index:100;box-shadow:0 2px 8px rgba(0,0,0,.3)}
+.header-logo{width:var(--side-w);background:#fefefe;display:flex;align-items:center;justify-content:center;padding:10px 16px;flex-shrink:0}
+.header-logo img{height:42px;object-fit:contain;width:100%}
+.header-title{flex:1;background:#E4002B;color:#fff;display:flex;align-items:center;justify-content:center;padding:14px 24px}
+.header-title h2{margin:0;font-size:16px;letter-spacing:.5px}
+.app-body{display:flex;flex:1}
+.sidebar{width:var(--side-w);background:var(--side-bg);min-height:calc(100vh - 52px);flex-shrink:0;overflow-y:auto}
+.nav-group{border-bottom:1px solid #3a4a55}
+.nav-group-header{display:flex;align-items:center;justify-content:space-between;padding:13px 16px;cursor:pointer;color:#fff;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;background:var(--side-grp);user-select:none;transition:background .15s}
+.nav-group-header:hover{background:#3a4a55}
+.nav-group-header .arrow{font-size:9px;transition:transform .2s;flex-shrink:0;margin-left:6px}
+.nav-group-header.open .arrow{transform:rotate(90deg)}
+.nav-group-header.open{color:#E4002B}
+.nav-children{display:none}
+.nav-children.open{display:block}
+.tab-btn{display:block;width:100%;padding:10px 16px 10px 22px;cursor:pointer;border:none;border-left:3px solid transparent;background:transparent;color:var(--side-txt);font-size:10.5px;font-weight:600;text-align:left;line-height:1.4;transition:background .15s,color .15s,border-color .15s}
+.tab-btn:hover{background:#3e4d58;color:#fff}
+.tab-btn.active{background:rgba(193,2,48,.18)!important;color:#fff!important;border-left-color:var(--rojo)!important}
+.content-area{flex:1;padding:24px;overflow-x:hidden}
+.card{background:#fff;padding:25px;border-radius:12px;box-shadow:0 5px 20px rgba(0,0,0,.12)}
+.filters-wrap{background:#f9f9f9;padding:7px;border-radius:8px;margin-bottom:10px;border:1px solid #eee;display:flex;flex-direction:column;gap:5px}
+.filters-row{display:flex;gap:7px;flex-wrap:wrap;align-items:flex-end}
+.filters-row+.filters-row{padding-top:5px;border-top:1px solid #e0e0e0}
+.f-item{display:flex;flex-direction:row;align-items:center;gap:4px;position:relative}
+.f-item label{font-size:8px;font-weight:700;color:#666;white-space:nowrap}
+.multiselect{padding:1px 5px;border-radius:3px;border:1px solid #ccc;font-size:9px;height:20px;cursor:pointer;background:#fff;min-width:90px;max-width:160px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.dropdown-content{display:none;position:absolute;top:100%;left:0;background:#fff;border:1px solid #ccc;z-index:200;max-height:180px;overflow-y:auto;box-shadow:0 4px 8px rgba(0,0,0,.12);padding:4px;min-width:160px;border-radius:3px}
+.dropdown-content label{display:flex;align-items:center;gap:6px;padding:4px 5px;cursor:pointer;font-weight:400;font-size:10px;color:#333;white-space:nowrap}
+.dropdown-content.open{display:block}
+input[type="date"]{padding:1px 3px;border-radius:3px;border:1px solid #ccc;font-size:9px;height:20px}
+.btn-clear{background:var(--rojo);color:#fff;border:none;padding:2px 10px;cursor:pointer;border-radius:3px;font-size:9px;font-weight:700;height:20px}
+.kpi-row{display:flex;gap:12px;margin-bottom:12px}
+.kpi-card{flex:1;background:#f9f9f9;border:1px solid #e8e8e8;border-radius:10px;padding:12px 16px;display:flex;flex-direction:column;align-items:center;justify-content:space-between;box-shadow:0 2px 8px rgba(0,0,0,.06);min-height:90px;text-align:center}
+.kpi-label{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:#999;width:100%}
+.kpi-value{font-size:22px;font-weight:800;color:#333F48;line-height:1;flex:1;display:flex;align-items:center;justify-content:center;width:100%}
+.kpi-sub{font-size:10px;color:#888;text-align:center;width:100%}
+.kpi-delta{display:inline-flex;align-items:center;gap:3px;font-size:22px;font-weight:800}
+.kpi-delta.up{color:#FF0000}
+.kpi-delta.down{color:#00B050}
+.kpi-delta.flat{color:#757575}
+.chart-title{font-size:13px;font-weight:700;color:#333;margin-bottom:6px;padding-left:2px;display:flex;align-items:center;gap:8px}
+.chart-title .ct-dash{font-size:11px;font-weight:600;background:#333F48;color:#fff;padding:2px 8px;border-radius:20px}
+.chart-title .ct-zone{font-size:11px;font-weight:600;background:#E4002B;color:#fff;padding:2px 8px;border-radius:20px}
+.chart-title .ct-info{font-size:11px;color:#888;font-weight:500}
+.chart-container{height:380px;position:relative;margin-top:10px}
+#uploadArea{text-align:center;padding:40px;border:2px dashed #E4002B;border-radius:8px}
+#uploadArea p{color:#666;font-size:13px}
+.tabla-wrap{margin-top:20px;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.1)}
+.tabla-toolbar{display:flex;align-items:center;justify-content:space-between;background:#333F48;color:#fff;padding:8px 14px;font-size:11px;font-weight:700}
+.btn-dl{background:#00882B;color:#fff;border:none;padding:4px 14px;border-radius:4px;cursor:pointer;font-size:10px;font-weight:700}
+.btn-dl:hover{background:#006820}
+.tabla-scroll{overflow-x:auto;max-height:380px;overflow-y:auto}
+.tbl-gen{width:100%;border-collapse:collapse;font-size:11px;font-family:'Segoe UI',sans-serif}
+.tbl-gen thead th{background:#333F48;color:#fff;padding:6px 10px;text-align:center;white-space:nowrap;font-size:10px;position:sticky;top:0;z-index:2;border-right:1px solid #4a5a68}
+.tbl-gen thead th:first-child{text-align:left;min-width:100px}
+.tbl-gen tbody td{padding:5px 10px;border-bottom:1px solid #eee;border-right:1px solid #eee;text-align:right;white-space:nowrap;font-size:10px}
+.tbl-gen tbody td:first-child{text-align:left;font-weight:700;background:#f4f6f8;position:sticky;left:0}
+.tbl-gen tbody tr:hover td{background:#edf3ff}
+.tbl-gen tbody tr:hover td:first-child{background:#dce6f0}
+.tbl-gen tfoot td{background:#333F48;color:#fff;font-weight:800;padding:5px 10px;text-align:right;font-size:10px;border-right:1px solid #4a5a68;position:sticky;bottom:0}
+.tbl-gen tfoot td:first-child{text-align:left}
+.tab-panel{display:none}
+.tab-panel.active{display:block}
+.ptto-row{color:#0071C1;font-weight:700}
+</style>
+</head>
+<body>
+
+<div class="header-bar">
+  <div class="header-logo">
+    <img src="data:image/png;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/4gHYSUNDX1BST0ZJTEUAAQEAAAHIAAAAAAQwAABtbnRyUkdCIFhZWiAH4AABAAEAAAAAAABhY3NwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAA9tYAAQAAAADTLQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAlkZXNjAAAA8AAAACRyWFlaAAABFAAAABRnWFlaAAABKAAAABRiWFlaAAABPAAAABR3dHB0AAABUAAAABRyVFJDAAABZAAAAChnVFJDAAABZAAAAChiVFJDAAABZAAAAChjcHJ0AAABjAAAADxtbHVjAAAAAAAAAAEAAAAMZW5VUwAAAAgAAAAcAHMAUgBHAEJYWVogAAAAAAAAb6IAADj1AAADkFhZWiAAAAAAAABimQAAt4UAABjaWFlaIAAAAAAAACSgAAAPhAAAts9YWVogAAAAAAAA9tYAAQAAAADTLXBhcmEAAAAAAAQAAAACZmYAAPKnAAANWQAAE9AAAApbAAAAAAAAAABtbHVjAAAAAAAAAAEAAAAMZW5VUwAAACAAAAAcAEcAbwBvAGcAbABlACAASQBuAGMALgAgADIAMAAxADb/2wBDAAUDBAQEAwUEBAQFBQUGBwwIBwcHBw8LCwkMEQ8SEhEPERETFhwXExQaFRERGCEYGh0dHx8fExciJCIeJBweHx7/wAARCAAyAMgDASIAAhEBAxEB/8QAGwABAAMBAQEBAAAAAAAAAAAAAAQFBgMCAQf/xAA0EAABAwMCBAQEBQUBAAAAAAABAAIDBAUREiExBkFRYRNxgZGhFCIyUrHB0RUjQmLw8f/EABgBAQEBAQEAAAAAAAAAAAAAAAABAgME/8QAHBEBAQEAAwEBAQAAAAAAAAAAAQARAiExQRL/2gAMAwEAAhEDEQA/AP3NERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERARRERAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREARNUQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREB//Z" alt="Senda Citi">
+  </div>
+  <div class="header-title">
+    <h2>GASTO DE HERRAMIENTAS</h2>
+  </div>
+</div>
+
+<div class="app-body">
+  <nav class="sidebar">
+    <div class="nav-group" id="grp1">
+      <div class="nav-group-header open" onclick="toggleGroup('grp1')">
+        <span>GASTOS</span>
+        <span class="arrow">&#9654;</span>
+      </div>
+      <div class="nav-children open" id="children-grp1">
+        <button class="tab-btn active" onclick="cambiarVista('herramientas')">Gasto de Herramientas</button>
+        <button class="tab-btn" onclick="cambiarVista('divisiones')">Gasto de Divisiones</button>
+        <button class="tab-btn" onclick="cambiarVista('componentes')">Gasto de Componentes</button>
+        <button class="tab-btn" onclick="cambiarVista('diversas')">Gasto de Cuentas Diversas</button>
+      </div>
+    </div>
+  </nav>
+
+  <div class="content-area">
+    <div class="card">
+
+      <div id="uploadArea">
+        <div id="autoLoadMsg" style="color:#555;font-size:13px;margin-bottom:12px;">
+          ⏳ Cargando datos automáticamente...
+        </div>
+        <div id="manualLoad" style="display:none;">
+          <p style="color:#c00;font-size:13px;">No se pudo cargar el archivo automáticamente.<br>Cárguelo manualmente:</p>
+          <input type="file" id="fileInput" accept=".xlsx">
+        </div>
+      </div>
+
+      <div id="mainUI" style="display:none;">
+
+        <!-- ═══════════════════════════ TAB: HERRAMIENTAS ═══════════════════════════ -->
+        <div class="tab-panel active" id="panel-herramientas">
+          <div class="filters-wrap">
+            <div class="filters-row">
+              <div class="f-item">
+                <label>AÑO</label>
+                <div class="multiselect" id="h-msANO">Todos...</div>
+                <div class="dropdown-content" id="h-optsANO"></div>
+              </div>
+              <div class="f-item">
+                <label>MES</label>
+                <div class="multiselect" id="h-msMES">Todos...</div>
+                <div class="dropdown-content" id="h-optsMES"></div>
+              </div>
+              <div class="f-item">
+                <label>ZONA</label>
+                <div class="multiselect" id="h-msZONA">Todos...</div>
+                <div class="dropdown-content" id="h-optsZONA"></div>
+              </div>
+              <div class="f-item">
+                <label>DIVISION</label>
+                <div class="multiselect" id="h-msDIVISION">Todos...</div>
+                <div class="dropdown-content" id="h-optsDIVISION"></div>
+              </div>
+              <button class="btn-clear" onclick="resetFilters('h')">LIMPIAR</button>
+            </div>
+            <div class="filters-row">
+              <div class="f-item">
+                <label>CUENTA</label>
+                <div class="multiselect" id="h-msCUENTA">HERRAMIENTAS</div>
+                <div class="dropdown-content" id="h-optsCUENTA"></div>
+              </div>
+              <div class="f-item">
+                <label>CLASIFICACION</label>
+                <div class="multiselect" id="h-msCLASIFICACION">Todos...</div>
+                <div class="dropdown-content" id="h-optsCLASIFICACION"></div>
+              </div>
+              <div class="f-item">
+                <label>SISTEMA</label>
+                <div class="multiselect" id="h-msSISTEMA">Todos...</div>
+                <div class="dropdown-content" id="h-optsSISTEMA"></div>
+              </div>
+              <div class="f-item">
+                <label>COMPONENTE</label>
+                <div class="multiselect" id="h-msCOMPONENTE">Todos...</div>
+                <div class="dropdown-content" id="h-optsCOMPONENTE"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="kpi-row" id="h-kpiRow">
+            <div class="kpi-card">
+              <div class="kpi-label">Gasto Año Actual</div>
+              <div class="kpi-value" id="h-kpi1">—</div>
+              <div class="kpi-sub" id="h-kpi1Sub"></div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-label">Variación vs Año Anterior</div>
+              <div class="kpi-value" id="h-kpi2">—</div>
+              <div class="kpi-sub" id="h-kpi2Sub"></div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-label">Gasto Año Anterior</div>
+              <div class="kpi-value" id="h-kpi3">—</div>
+              <div class="kpi-sub" id="h-kpi3Sub"></div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-label">Promedio Mensual Actual</div>
+              <div class="kpi-value" id="h-kpi4">—</div>
+              <div class="kpi-sub" id="h-kpi4Sub"></div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-label">Mes Mayor Gasto</div>
+              <div class="kpi-value" id="h-kpi5">—</div>
+              <div class="kpi-sub" id="h-kpi5Sub"></div>
+            </div>
+          </div>
+
+          <div class="chart-title">
+            <span class="ct-dash">GASTO HERRAMIENTAS</span>
+            <span class="ct-zone" id="h-ctZone">Nacional</span>
+            <span class="ct-info" id="h-ctInfo"></span>
+          </div>
+          <div class="chart-container">
+            <canvas id="chartHerramientas"></canvas>
+          </div>
+
+          <div class="tabla-wrap" id="h-tablaWrap">
+            <div class="tabla-toolbar">
+              <span>GASTO POR MES — HERRAMIENTAS (Miles de Pesos)</span>
+              <button class="btn-dl" onclick="descargarCSV('h-tbl')">&#11015; Descargar CSV</button>
+            </div>
+            <div class="tabla-scroll">
+              <table class="tbl-gen" id="h-tbl">
+                <thead id="h-tblHead"></thead>
+                <tbody id="h-tblBody"></tbody>
+                <tfoot id="h-tblFoot"></tfoot>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- ═══════════════════════════ TAB: DIVISIONES ═══════════════════════════ -->
+        <div class="tab-panel" id="panel-divisiones">
+          <div class="filters-wrap">
+            <div class="filters-row">
+              <div class="f-item">
+                <label>AÑO</label>
+                <div class="multiselect" id="d-msANO">Todos...</div>
+                <div class="dropdown-content" id="d-optsANO"></div>
+              </div>
+              <div class="f-item">
+                <label>MES</label>
+                <div class="multiselect" id="d-msMES">Todos...</div>
+                <div class="dropdown-content" id="d-optsMES"></div>
+              </div>
+              <div class="f-item">
+                <label>ZONA</label>
+                <div class="multiselect" id="d-msZONA">Todos...</div>
+                <div class="dropdown-content" id="d-optsZONA"></div>
+              </div>
+              <div class="f-item">
+                <label>DIVISION</label>
+                <div class="multiselect" id="d-msDIVISION">Todos...</div>
+                <div class="dropdown-content" id="d-optsDIVISION"></div>
+              </div>
+              <button class="btn-clear" onclick="resetFilters('d')">LIMPIAR</button>
+            </div>
+            <div class="filters-row">
+              <div class="f-item">
+                <label>CUENTA</label>
+                <div class="multiselect" id="d-msCUENTA">HERRAMIENTAS</div>
+                <div class="dropdown-content" id="d-optsCUENTA"></div>
+              </div>
+              <div class="f-item">
+                <label>CLASIFICACION</label>
+                <div class="multiselect" id="d-msCLASIFICACION">Todos...</div>
+                <div class="dropdown-content" id="d-optsCLASIFICACION"></div>
+              </div>
+              <div class="f-item">
+                <label>SISTEMA</label>
+                <div class="multiselect" id="d-msSISTEMA">Todos...</div>
+                <div class="dropdown-content" id="d-optsSISTEMA"></div>
+              </div>
+              <div class="f-item">
+                <label>COMPONENTE</label>
+                <div class="multiselect" id="d-msCOMPONENTE">Todos...</div>
+                <div class="dropdown-content" id="d-optsCOMPONENTE"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="tabla-wrap">
+            <div class="tabla-toolbar">
+              <span>GASTO POR DIVISIÓN — AÑO ACTUAL (Miles de Pesos)</span>
+              <button class="btn-dl" onclick="descargarCSV('d-tbl')">&#11015; Descargar CSV</button>
+            </div>
+            <div class="tabla-scroll">
+              <table class="tbl-gen" id="d-tbl">
+                <thead id="d-tblHead"></thead>
+                <tbody id="d-tblBody"></tbody>
+                <tfoot id="d-tblFoot"></tfoot>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- ═══════════════════════════ TAB: COMPONENTES ═══════════════════════════ -->
+        <div class="tab-panel" id="panel-componentes">
+          <div class="filters-wrap">
+            <div class="filters-row">
+              <div class="f-item">
+                <label>AÑO</label>
+                <div class="multiselect" id="c-msANO">Todos...</div>
+                <div class="dropdown-content" id="c-optsANO"></div>
+              </div>
+              <div class="f-item">
+                <label>MES</label>
+                <div class="multiselect" id="c-msMES">Todos...</div>
+                <div class="dropdown-content" id="c-optsMES"></div>
+              </div>
+              <div class="f-item">
+                <label>ZONA</label>
+                <div class="multiselect" id="c-msZONA">Todos...</div>
+                <div class="dropdown-content" id="c-optsZONA"></div>
+              </div>
+              <div class="f-item">
+                <label>DIVISION</label>
+                <div class="multiselect" id="c-msDIVISION">Todos...</div>
+                <div class="dropdown-content" id="c-optsDIVISION"></div>
+              </div>
+              <button class="btn-clear" onclick="resetFilters('c')">LIMPIAR</button>
+            </div>
+            <div class="filters-row">
+              <div class="f-item">
+                <label>CUENTA</label>
+                <div class="multiselect" id="c-msCUENTA">HERRAMIENTAS</div>
+                <div class="dropdown-content" id="c-optsCUENTA"></div>
+              </div>
+              <div class="f-item">
+                <label>CLASIFICACION</label>
+                <div class="multiselect" id="c-msCLASIFICACION">Todos...</div>
+                <div class="dropdown-content" id="c-optsCLASIFICACION"></div>
+              </div>
+              <div class="f-item">
+                <label>SISTEMA</label>
+                <div class="multiselect" id="c-msSISTEMA">Todos...</div>
+                <div class="dropdown-content" id="c-optsSISTEMA"></div>
+              </div>
+              <div class="f-item">
+                <label>COMPONENTE</label>
+                <div class="multiselect" id="c-msCOMPONENTE">Todos...</div>
+                <div class="dropdown-content" id="c-optsCOMPONENTE"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="tabla-wrap">
+            <div class="tabla-toolbar">
+              <span>GASTO POR COMPONENTE — AÑO ACTUAL (Miles de Pesos)</span>
+              <button class="btn-dl" onclick="descargarCSV('c-tbl')">&#11015; Descargar CSV</button>
+            </div>
+            <div class="tabla-scroll">
+              <table class="tbl-gen" id="c-tbl">
+                <thead id="c-tblHead"></thead>
+                <tbody id="c-tblBody"></tbody>
+                <tfoot id="c-tblFoot"></tfoot>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- ═══════════════════════════ TAB: DIVERSAS ═══════════════════════════ -->
+        <div class="tab-panel" id="panel-diversas">
+          <div class="filters-wrap">
+            <div class="filters-row">
+              <div class="f-item">
+                <label>AÑO</label>
+                <div class="multiselect" id="v-msANO">Todos...</div>
+                <div class="dropdown-content" id="v-optsANO"></div>
+              </div>
+              <div class="f-item">
+                <label>MES</label>
+                <div class="multiselect" id="v-msMES">Todos...</div>
+                <div class="dropdown-content" id="v-optsMES"></div>
+              </div>
+              <div class="f-item">
+                <label>ZONA</label>
+                <div class="multiselect" id="v-msZONA">Todos...</div>
+                <div class="dropdown-content" id="v-optsZONA"></div>
+              </div>
+              <div class="f-item">
+                <label>DIVISION</label>
+                <div class="multiselect" id="v-msDIVISION">Todos...</div>
+                <div class="dropdown-content" id="v-optsDIVISION"></div>
+              </div>
+              <button class="btn-clear" onclick="resetFilters('v')">LIMPIAR</button>
+            </div>
+            <div class="filters-row">
+              <div class="f-item">
+                <label>CUENTA</label>
+                <div class="multiselect" id="v-msCUENTA">Todos...</div>
+                <div class="dropdown-content" id="v-optsCUENTA"></div>
+              </div>
+              <div class="f-item">
+                <label>CLASIFICACION</label>
+                <div class="multiselect" id="v-msCLASIFICACION">Todos...</div>
+                <div class="dropdown-content" id="v-optsCLASIFICACION"></div>
+              </div>
+              <div class="f-item">
+                <label>SISTEMA</label>
+                <div class="multiselect" id="v-msSISTEMA">Todos...</div>
+                <div class="dropdown-content" id="v-optsSISTEMA"></div>
+              </div>
+              <div class="f-item">
+                <label>COMPONENTE</label>
+                <div class="multiselect" id="v-msCOMPONENTE">Todos...</div>
+                <div class="dropdown-content" id="v-optsCOMPONENTE"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="tabla-wrap">
+            <div class="tabla-toolbar">
+              <span>GASTO POR CUENTA DIVERSA — AÑO ACTUAL (Miles de Pesos)</span>
+              <button class="btn-dl" onclick="descargarCSV('v-tbl')">&#11015; Descargar CSV</button>
+            </div>
+            <div class="tabla-scroll">
+              <table class="tbl-gen" id="v-tbl">
+                <thead id="v-tblHead"></thead>
+                <tbody id="v-tblBody"></tbody>
+                <tfoot id="v-tblFoot"></tfoot>
+              </table>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /mainUI -->
+    </div>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+const EXCEL_URL = 'Gastoherramientas.xlsx';
+const MESES_CORTOS = ['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SEP','OCT','NOV','DIC'];
+const MESES_NOMBRES = ['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'];
+const FILTER_KEYS = ['ANO','MES','ZONA','DIVISION','CUENTA','CLASIFICACION','SISTEMA','COMPONENTE'];
+
+// Global data
+let rawData = [];
+let charts = {};
+
+// Filters per tab: prefix h=herramientas, d=divisiones, c=componentes, v=diversas
+let tabFilters = {
+  h: { ANO:[], MES:[], ZONA:[], DIVISION:[], CUENTA:['HERRAMIENTAS'], CLASIFICACION:[], SISTEMA:[], COMPONENTE:[] },
+  d: { ANO:[], MES:[], ZONA:[], DIVISION:[], CUENTA:['HERRAMIENTAS'], CLASIFICACION:[], SISTEMA:[], COMPONENTE:[] },
+  c: { ANO:[], MES:[], ZONA:[], DIVISION:[], CUENTA:['HERRAMIENTAS'], CLASIFICACION:[], SISTEMA:[], COMPONENTE:[] },
+  v: { ANO:[], MES:[], ZONA:[], DIVISION:[], CUENTA:[], CLASIFICACION:[], SISTEMA:[], COMPONENTE:[] }
+};
+
+let currentTab = 'herramientas';
+const $ = id => document.getElementById(id);
+
+// ── Sidebar / Tab switching ──
+function toggleGroup(id) {
+  const h = document.querySelector(`[onclick="toggleGroup('${id}')"]`);
+  const c = $(`children-${id}`);
+  if(h&&c){ h.classList.toggle('open'); c.classList.toggle('open'); }
+}
+
+function cambiarVista(tab) {
+  currentTab = tab;
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  const btns = document.querySelectorAll('.tab-btn');
+  const map = {herramientas:0, divisiones:1, componentes:2, diversas:3};
+  btns[map[tab]].classList.add('active');
+  $(`panel-${tab}`).classList.add('active');
+  renderTab(tab);
+}
+
+// ── Dropdown logic ──
+document.addEventListener('click', e => {
+  if(e.target.type==='checkbox' || e.target.tagName==='LABEL') return;
+  const inside = e.target.closest('.f-item');
+  document.querySelectorAll('.dropdown-content').forEach(d => {
+    if(!inside || !inside.contains(d)) d.classList.remove('open');
+  });
+});
+
+function bindDropdown(pfx, field) {
+  const ms = $(`${pfx}-ms${field}`);
+  const dd = $(`${pfx}-opts${field}`);
+  if(!ms||!dd) return;
+  ms.addEventListener('click', ev => {
+    ev.stopPropagation();
+    const wasOpen = dd.classList.contains('open');
+    document.querySelectorAll('.dropdown-content').forEach(d => d.classList.remove('open'));
+    if(!wasOpen) dd.classList.add('open');
+  });
+}
+
+// ── Load Excel ──
+function procesarExcel(buf) {
+  const wb = XLSX.read(buf, {type:'array', cellDates:true});
+  const raw = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
+  rawData = raw.map(r => {
+    const n = {};
+    for(const k in r) n[k.trim().toUpperCase()] = r[k];
+    // Normalize
+    if(n['FECHA CONTABLE']) {
+      const d = new Date(n['FECHA CONTABLE']);
+      n['_YEAR'] = d.getFullYear();
+      n['_MONTH'] = d.getMonth()+1;
+    }
+    n['CUENTA'] = (n['CUENTA']||'').toString().trim();
+    n['CLASIFICACION'] = (n['CLASIFICACION']||'').toString().trim();
+    n['SISTEMA'] = (n['SISTEMA']||'').toString().trim();
+    n['COMPONENTE'] = (n['COMPONENTE']||'').toString().trim();
+    n['DIVISION'] = (n['DIVISION']||'').toString().trim();
+    n['ZONA'] = (n['ZONA']||'').toString().trim();
+    n['_IMPORTE'] = Math.abs(parseFloat(n['IMPORTE'])||0);
+    return n;
+  });
+
+  $('mainUI').style.display = 'block';
+  $('uploadArea').style.display = 'none';
+
+  // Build all dropdowns
+  ['h','d','c','v'].forEach(pfx => buildFilters(pfx));
+  // Set initial CUENTA selection
+  setTimeout(() => {
+    setInitialCuenta('h');
+    setInitialCuenta('d');
+    setInitialCuenta('c');
+  }, 50);
+
+  renderTab('herramientas');
+}
+
+function setInitialCuenta(pfx) {
+  const dd = $(`${pfx}-optsCUENTA`);
+  if(!dd) return;
+  dd.querySelectorAll('input').forEach(cb => {
+    cb.checked = (cb.value === 'HERRAMIENTAS');
+  });
+  tabFilters[pfx].CUENTA = ['HERRAMIENTAS'];
+  $(`${pfx}-msCUENTA`).innerText = 'HERRAMIENTAS';
+}
+
+window.addEventListener('load', () => {
+  fetch(EXCEL_URL+'?v='+Date.now(), {cache:'no-store'})
+    .then(r => { if(!r.ok) throw 0; return r.arrayBuffer(); })
+    .then(procesarExcel)
+    .catch(() => { $('autoLoadMsg').style.display='none'; $('manualLoad').style.display='block'; });
+});
+
+document.addEventListener('change', e => {
+  if(e.target.id !== 'fileInput') return;
+  const reader = new FileReader();
+  reader.onload = ev => procesarExcel(ev.target.result);
+  reader.readAsArrayBuffer(e.target.files[0]);
+});
+
+// ── Build filter dropdowns ──
+function buildFilters(pfx) {
+  const flds = ['ANO','MES','ZONA','DIVISION','CUENTA','CLASIFICACION','SISTEMA','COMPONENTE'];
+  flds.forEach(field => {
+    const dd = $(`${pfx}-opts${field}`);
+    if(!dd) return;
+    bindDropdown(pfx, field);
+    let vals = [];
+    if(field==='ANO') vals = [...new Set(rawData.map(d=>d['_YEAR']))].filter(Boolean).sort();
+    else if(field==='MES') vals = MESES_NOMBRES;
+    else vals = [...new Set(rawData.map(d=>d[field==='ANO'?'_YEAR':field]))].filter(v=>v).sort();
+    dd.innerHTML = vals.map(v =>
+      `<label><input type="checkbox" value="${v}" onclick="handleFilterChange('${pfx}','${field}')"> ${v}</label>`
+    ).join('');
+    // Sync initial state
+    const sel = new Set(tabFilters[pfx][field] || []);
+    dd.querySelectorAll('input').forEach(cb => cb.checked = sel.has(cb.value)||sel.has(Number(cb.value)));
+    const ms = $(`${pfx}-ms${field}`);
+    if(ms) ms.innerText = tabFilters[pfx][field].length ? tabFilters[pfx][field].join(', ') : 'Todos...';
+  });
+}
+
+function handleFilterChange(pfx, field) {
+  const dd = $(`${pfx}-opts${field}`);
+  if(!dd) return;
+  tabFilters[pfx][field] = Array.from(dd.querySelectorAll('input:checked')).map(i => {
+    return field==='ANO' ? Number(i.value) : i.value;
+  });
+  const ms = $(`${pfx}-ms${field}`);
+  if(ms) ms.innerText = tabFilters[pfx][field].length ? tabFilters[pfx][field].join(', ') : 'Todos...';
+  renderTab(currentTab);
+}
+
+function resetFilters(pfx) {
+  const defaultCuenta = pfx==='v' ? [] : ['HERRAMIENTAS'];
+  tabFilters[pfx] = { ANO:[], MES:[], ZONA:[], DIVISION:[], CUENTA:defaultCuenta, CLASIFICACION:[], SISTEMA:[], COMPONENTE:[] };
+  buildFilters(pfx);
+  if(pfx !== 'v') setInitialCuenta(pfx);
+  renderTab(currentTab);
+}
+
+// ── Filter data ──
+function filterData(pfx) {
+  const f = tabFilters[pfx];
+  return rawData.filter(d => {
+    if(f.ANO.length && !f.ANO.includes(d['_YEAR'])) return false;
+    if(f.MES.length) {
+      const mNombre = MESES_NOMBRES[d['_MONTH']-1];
+      if(!f.MES.includes(mNombre)) return false;
+    }
+    if(f.ZONA.length && !f.ZONA.includes(d.ZONA)) return false;
+    if(f.DIVISION.length && !f.DIVISION.includes(d.DIVISION)) return false;
+    if(f.CUENTA.length && !f.CUENTA.includes(d.CUENTA)) return false;
+    if(f.CLASIFICACION.length && !f.CLASIFICACION.includes(d.CLASIFICACION)) return false;
+    if(f.SISTEMA.length && !f.SISTEMA.includes(d.SISTEMA)) return false;
+    if(f.COMPONENTE.length && !f.COMPONENTE.includes(d.COMPONENTE)) return false;
+    return true;
+  });
+}
+
+// ── Render dispatcher ──
+function renderTab(tab) {
+  const pfxMap = {herramientas:'h', divisiones:'d', componentes:'c', diversas:'v'};
+  const pfx = pfxMap[tab];
+  const data = filterData(pfx);
+  if(tab==='herramientas') renderHerramientas(data, pfx);
+  else if(tab==='divisiones') renderDivisiones(data, pfx);
+  else if(tab==='componentes') renderComponentes(data, pfx);
+  else renderDiversas(data, pfx);
+}
+
+function fmt(v) {
+  return v > 0 ? '$'+Math.round(v/1000).toLocaleString('es-MX')+'K' : '-';
+}
+function fmtFull(v) {
+  return v > 0 ? '$'+Math.round(v).toLocaleString('es-MX') : '-';
+}
+
+// ── HERRAMIENTAS ──
+function renderHerramientas(data, pfx) {
+  const allYears = [...new Set(data.map(d=>d['_YEAR']))].sort();
+  const curYear = allYears[allYears.length-1] || new Date().getFullYear();
+  const prevYear = curYear - 1;
+
+  // Group by year+month
+  const byYM = {};
+  data.forEach(d => {
+    const k = `${d['_YEAR']}-${d['_MONTH']}`;
+    byYM[k] = (byYM[k]||0) + d['_IMPORTE'];
+  });
+
+  const months = [1,2,3,4,5,6,7,8,9,10,11,12];
+  const labels = months.map(m => MESES_CORTOS[m-1]);
+  const dataCur = months.map(m => byYM[`${curYear}-${m}`]||0);
+  const dataPrev = months.map(m => byYM[`${prevYear}-${m}`]||0);
+
+  // KPIs
+  const sumCur = dataCur.reduce((a,b)=>a+b,0);
+  const sumPrev = dataPrev.filter((_,i)=>dataCur[i]>0).reduce((a,b)=>a+b,0); // same period
+  const varPct = sumPrev>0 ? ((sumCur-sumPrev)/sumPrev)*100 : 0;
+  const mesesConDatos = dataCur.filter(v=>v>0).length || 1;
+  const prom = sumCur / mesesConDatos;
+  const maxVal = Math.max(...dataCur);
+  const maxMes = MESES_CORTOS[dataCur.indexOf(maxVal)];
+
+  $('h-kpi1').textContent = fmtFull(sumCur);
+  $('h-kpi1Sub').textContent = `Año ${curYear}`;
+  const arrow = varPct>0?'▲':varPct<0?'▼':'●';
+  const cls = varPct>0?'up':varPct<0?'down':'flat';
+  $('h-kpi2').innerHTML = `<span class="kpi-delta ${cls}">${arrow} ${Math.abs(varPct).toFixed(1)}%</span>`;
+  $('h-kpi2Sub').textContent = `vs ${prevYear}`;
+  $('h-kpi3').textContent = fmtFull(sumPrev);
+  $('h-kpi3Sub').textContent = `Año ${prevYear}`;
+  $('h-kpi4').textContent = fmtFull(prom);
+  $('h-kpi4Sub').textContent = 'Mensual';
+  $('h-kpi5').textContent = maxMes;
+  $('h-kpi5Sub').textContent = fmtFull(maxVal);
+
+  $('h-ctZone').textContent = tabFilters[pfx].DIVISION.length ? tabFilters[pfx].DIVISION.join(', ') : 'Nacional';
+  $('h-ctInfo').textContent = tabFilters[pfx].ANO.length ? tabFilters[pfx].ANO.join(', ') : `${prevYear} vs ${curYear}`;
+
+  // Chart
+  if(charts['herramientas']) charts['herramientas'].destroy();
+  const cv = $('chartHerramientas');
+  charts['herramientas'] = new Chart(cv, {
+    data: {
+      labels,
+      datasets: [
+        {
+          label: String(prevYear),
+          type: 'line',
+          data: dataPrev,
+          borderColor: 'rgba(180,180,180,0.9)',
+          backgroundColor: 'rgba(180,180,180,0.25)',
+          fill: true,
+          tension: 0.3,
+          pointRadius: 3,
+          borderWidth: 2,
+          order: 0
+        },
+        {
+          label: String(curYear),
+          type: 'bar',
+          data: dataCur,
+          backgroundColor: '#C10230',
+          borderColor: '#a00220',
+          borderWidth: 1,
+          order: 1
+        }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      scales: {
+        x: { grid:{display:false} },
+        y: { grid:{display:false}, beginAtZero:true, ticks:{callback:v=>'$'+(v/1000).toFixed(0)+'K'} }
+      },
+      plugins: {
+        legend: {position:'bottom'},
+        tooltip: {
+          callbacks: {
+            label: ctx => `${ctx.dataset.label}: $${Math.round(ctx.raw).toLocaleString('es-MX')}`
+          }
+        }
+      }
+    }
+  });
+
+  // Table
+  const head = $('h-tblHead');
+  const body = $('h-tblBody');
+  const foot = $('h-tblFoot');
+  const activeMonths = months.filter(m => dataCur[m-1]>0 || dataPrev[m-1]>0);
+  const mLabels = activeMonths.length > 0 ? activeMonths : months;
+
+  head.innerHTML = '<tr><th>CONCEPTO</th>' + mLabels.map(m=>`<th>${MESES_CORTOS[m-1]}</th>`).join('') + '<th>TOTAL</th></tr>';
+
+  const buildRow = (label, arr, cls='') => {
+    const vals = mLabels.map(m => arr[m-1]||0);
+    const total = vals.reduce((a,b)=>a+b,0);
+    const style = cls ? ` class="${cls}"` : '';
+    return `<tr${style}><td>${label}</td>${vals.map(v=>`<td>${v>0?fmtFull(v):'-'}</td>`).join('')}<td>${total>0?fmtFull(total):'-'}</td></tr>`;
+  };
+
+  body.innerHTML = buildRow(String(curYear), dataCur) + buildRow(String(prevYear), dataPrev);
+
+  const totCur = mLabels.map(m=>dataCur[m-1]||0).reduce((a,b)=>a+b,0);
+  foot.innerHTML = `<tr><td>TOTAL ${curYear}</td>${mLabels.map(m=>`<td>${fmtFull(dataCur[m-1]||0)||'-'}</td>`).join('')}<td>${fmtFull(totCur)}</td></tr>`;
+}
+
+// ── DIVISIONES ──
+function renderDivisiones(data, pfx) {
+  const allYears = [...new Set(data.map(d=>d['_YEAR']))].sort();
+  const curYear = tabFilters[pfx].ANO.length ? Math.max(...tabFilters[pfx].ANO) : (allYears[allYears.length-1]||new Date().getFullYear());
+  const curData = data.filter(d => d['_YEAR']===curYear);
+
+  const divisions = [...new Set(curData.map(d=>d.DIVISION))].filter(Boolean);
+  const months = [1,2,3,4,5,6,7,8,9,10,11,12];
+
+  // Aggregate
+  const divMap = {};
+  curData.forEach(d => {
+    if(!divMap[d.DIVISION]) divMap[d.DIVISION] = {};
+    divMap[d.DIVISION][d['_MONTH']] = (divMap[d.DIVISION][d['_MONTH']]||0) + d['_IMPORTE'];
+  });
+
+  // Sort by total
+  const sorted = Object.entries(divMap).map(([div, mData]) => {
+    const total = Object.values(mData).reduce((a,b)=>a+b,0);
+    return {div, mData, total};
+  }).sort((a,b)=>b.total-a.total);
+
+  const activeMonths = months.filter(m => sorted.some(s=>s.mData[m]>0));
+  const mLabels = activeMonths.length > 0 ? activeMonths : [1,2,3,4];
+
+  const head = $('d-tblHead');
+  const body = $('d-tblBody');
+  const foot = $('d-tblFoot');
+
+  head.innerHTML = `<tr><th>DIVISIÓN</th>${mLabels.map(m=>`<th>${MESES_CORTOS[m-1]}</th>`).join('')}<th>TOTAL</th></tr>`;
+
+  body.innerHTML = sorted.map(({div,mData,total}) =>
+    `<tr><td>${div}</td>${mLabels.map(m=>`<td>${mData[m]?fmtFull(mData[m]):'-'}</td>`).join('')}<td>${fmtFull(total)}</td></tr>`
+  ).join('');
+
+  const footTotals = mLabels.map(m => sorted.reduce((a,s)=>a+(s.mData[m]||0),0));
+  const grandTotal = footTotals.reduce((a,b)=>a+b,0);
+  foot.innerHTML = `<tr><td>TOTAL</td>${footTotals.map(v=>`<td>${fmtFull(v)}</td>`).join('')}<td>${fmtFull(grandTotal)}</td></tr>`;
+}
+
+// ── COMPONENTES ──
+function renderComponentes(data, pfx) {
+  const allYears = [...new Set(data.map(d=>d['_YEAR']))].sort();
+  const curYear = tabFilters[pfx].ANO.length ? Math.max(...tabFilters[pfx].ANO) : (allYears[allYears.length-1]||new Date().getFullYear());
+  const curData = data.filter(d => d['_YEAR']===curYear);
+
+  const months = [1,2,3,4,5,6,7,8,9,10,11,12];
+  const compMap = {};
+  curData.forEach(d => {
+    if(!compMap[d.COMPONENTE]) compMap[d.COMPONENTE] = {};
+    compMap[d.COMPONENTE][d['_MONTH']] = (compMap[d.COMPONENTE][d['_MONTH']]||0) + d['_IMPORTE'];
+  });
+
+  const sorted = Object.entries(compMap).map(([comp, mData]) => {
+    const total = Object.values(mData).reduce((a,b)=>a+b,0);
+    return {comp, mData, total};
+  }).sort((a,b)=>b.total-a.total);
+
+  const activeMonths = months.filter(m => sorted.some(s=>s.mData[m]>0));
+  const mLabels = activeMonths.length > 0 ? activeMonths : [1,2,3,4];
+
+  const head = $('c-tblHead');
+  const body = $('c-tblBody');
+  const foot = $('c-tblFoot');
+
+  head.innerHTML = `<tr><th>COMPONENTE</th>${mLabels.map(m=>`<th>${MESES_CORTOS[m-1]}</th>`).join('')}<th>TOTAL</th></tr>`;
+
+  body.innerHTML = sorted.map(({comp,mData,total}) =>
+    `<tr><td>${comp||'(Sin componente)'}</td>${mLabels.map(m=>`<td>${mData[m]?fmtFull(mData[m]):'-'}</td>`).join('')}<td>${fmtFull(total)}</td></tr>`
+  ).join('');
+
+  const footTotals = mLabels.map(m => sorted.reduce((a,s)=>a+(s.mData[m]||0),0));
+  const grandTotal = footTotals.reduce((a,b)=>a+b,0);
+  foot.innerHTML = `<tr><td>TOTAL</td>${footTotals.map(v=>`<td>${fmtFull(v)}</td>`).join('')}<td>${fmtFull(grandTotal)}</td></tr>`;
+}
+
+// ── DIVERSAS ──
+function renderDiversas(data, pfx) {
+  const allYears = [...new Set(data.map(d=>d['_YEAR']))].sort();
+  const curYear = tabFilters[pfx].ANO.length ? Math.max(...tabFilters[pfx].ANO) : (allYears[allYears.length-1]||new Date().getFullYear());
+  const curData = data.filter(d => d['_YEAR']===curYear);
+
+  const months = [1,2,3,4,5,6,7,8,9,10,11,12];
+  const cuentaMap = {};
+  curData.forEach(d => {
+    if(!cuentaMap[d.CUENTA]) cuentaMap[d.CUENTA] = {};
+    cuentaMap[d.CUENTA][d['_MONTH']] = (cuentaMap[d.CUENTA][d['_MONTH']]||0) + d['_IMPORTE'];
+  });
+
+  const sorted = Object.entries(cuentaMap).map(([cuenta, mData]) => {
+    const total = Object.values(mData).reduce((a,b)=>a+b,0);
+    return {cuenta, mData, total};
+  }).sort((a,b)=>b.total-a.total);
+
+  const activeMonths = months.filter(m => sorted.some(s=>s.mData[m]>0));
+  const mLabels = activeMonths.length > 0 ? activeMonths : [1,2,3,4];
+
+  const head = $('v-tblHead');
+  const body = $('v-tblBody');
+  const foot = $('v-tblFoot');
+
+  head.innerHTML = `<tr><th>CUENTA</th>${mLabels.map(m=>`<th>${MESES_CORTOS[m-1]}</th>`).join('')}<th>TOTAL</th></tr>`;
+
+  body.innerHTML = sorted.map(({cuenta,mData,total}) =>
+    `<tr><td>${cuenta}</td>${mLabels.map(m=>`<td>${mData[m]?fmtFull(mData[m]):'-'}</td>`).join('')}<td>${fmtFull(total)}</td></tr>`
+  ).join('');
+
+  const footTotals = mLabels.map(m => sorted.reduce((a,s)=>a+(s.mData[m]||0),0));
+  const grandTotal = footTotals.reduce((a,b)=>a+b,0);
+  foot.innerHTML = `<tr><td>TOTAL</td>${footTotals.map(v=>`<td>${fmtFull(v)}</td>`).join('')}<td>${fmtFull(grandTotal)}</td></tr>`;
+}
+
+// ── CSV Download ──
+function descargarCSV(tblId) {
+  const tbl = $(tblId);
+  if(!tbl) return;
+  const csv = '\uFEFF' + [...tbl.querySelectorAll('tr')].map(r =>
+    [...r.querySelectorAll('th,td')].map(c => '"'+c.textContent.trim().replace(/"/g,'""')+'"').join(',')
+  ).join('\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv], {type:'text/csv;charset=utf-8;'}));
+  a.download = (tblId.split('-')[0]+'_datos').replace(/[^a-z0-9]/gi,'_')+'.csv';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+}
+</script>
+</body>
+</html>
