@@ -294,18 +294,28 @@ function cambiarVista(tab){
   renderTab(tab);
 }
 document.addEventListener('click',e=>{
-  if(e.target.type==='checkbox'||e.target.tagName==='LABEL') return;
-  const ins=e.target.closest('.f-item');
-  document.querySelectorAll('.dropdown-content').forEach(d=>{if(!ins||!ins.contains(d))d.classList.remove('open');});
+  // Si el click está DENTRO de cualquier dropdown-content o multiselect, no cerrar
+  if(e.target.closest('.dropdown-content')) return;
+  if(e.target.closest('.multiselect')) return;
+  // Click afuera → cerrar todos los dropdowns
+  document.querySelectorAll('.dropdown-content').forEach(d=>d.classList.remove('open'));
 });
 function bindDD(pfx,fld){
   const ms=$(`${pfx}-ms${fld}`),dd=$(`${pfx}-opts${fld}`);
   if(!ms||!dd) return;
+  // Marcar handlers como ya instalados para no duplicarlos si bindDD se llama varias veces
+  if(ms._boundDD) return;
+  ms._boundDD = true;
   ms.addEventListener('click',ev=>{
     ev.stopPropagation();
     const was=dd.classList.contains('open');
     document.querySelectorAll('.dropdown-content').forEach(d=>d.classList.remove('open'));
     if(!was) dd.classList.add('open');
+  });
+  // Delegación: un solo listener de 'change' en el dropdown contenedor
+  dd.addEventListener('change',ev=>{
+    if(ev.target.type!=='checkbox') return;
+    hfc(pfx,fld);
   });
 }
 
@@ -348,7 +358,7 @@ function buildF(p){
     const dd=$(`${p}-opts${fld}`); if(!dd) return;
     bindDD(p,fld);
     let vals=fld==='ANO'?allYearsG:fld==='MES'?MN:[...new Set(rawData.map(d=>d[fld]))].filter(v=>v).sort();
-    dd.innerHTML=vals.map(v=>`<label><input type="checkbox" value="${v}" onchange="hfc('${p}','${fld}')"> ${v}</label>`).join('');
+    dd.innerHTML=vals.map(v=>`<label><input type="checkbox" value="${v}"> ${v}</label>`).join('');
     const sel=new Set(tabF[p][fld]||[]);
     dd.querySelectorAll('input').forEach(cb=>cb.checked=sel.has(cb.value)||sel.has(Number(cb.value)));
     const ms=$(`${p}-ms${fld}`); if(ms) ms.innerText=tabF[p][fld].length?tabF[p][fld].join(', '):'Todos...';
