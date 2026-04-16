@@ -5,7 +5,6 @@
 <title>GASTO DE HERRAMIENTAS</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-
 <style>
 :root{
   --rojo:#C10230;--gris:#F4F4F4;--azul:#0071C1;--verde:#00B050;
@@ -35,7 +34,7 @@ body{font-family:'Segoe UI',Tahoma,sans-serif;background:var(--gris);margin:0;di
 .filters-wrap{background:#f9f9f9;padding:7px;border-radius:8px;margin-bottom:10px;border:1px solid #eee;display:flex;flex-direction:column;gap:5px}
 .filters-row{display:flex;gap:7px;flex-wrap:wrap;align-items:flex-end}
 .filters-row+.filters-row{padding-top:5px;border-top:1px solid #e0e0e0}
-.f-item{display:flex;flex-direction:row;align-items:center;gap:4px;position:relative}
+.f-item{display:flex;align-items:center;gap:4px;position:relative}
 .f-item label{font-size:8px;font-weight:700;color:#666;white-space:nowrap}
 .multiselect{padding:1px 5px;border-radius:3px;border:1px solid #ccc;font-size:9px;height:20px;cursor:pointer;background:#fff;min-width:90px;max-width:160px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
 .dropdown-content{display:none;position:absolute;top:100%;left:0;background:#fff;border:1px solid #ccc;z-index:200;max-height:180px;overflow-y:auto;box-shadow:0 4px 8px rgba(0,0,0,.12);padding:4px;min-width:160px;border-radius:3px}
@@ -60,7 +59,6 @@ body{font-family:'Segoe UI',Tahoma,sans-serif;background:var(--gris);margin:0;di
 .tabla-toolbar{display:flex;align-items:center;justify-content:space-between;background:#333F48;color:#fff;padding:8px 14px;font-size:11px;font-weight:700}
 .btn-dl{background:#00882B;color:#fff;border:none;padding:4px 14px;border-radius:4px;cursor:pointer;font-size:10px;font-weight:700}
 .btn-dl:hover{background:#006820}
-/* ── Tabla herramientas ── */
 .tbl-h-scroll{overflow-x:auto;max-height:320px;overflow-y:auto}
 .tbl-gen{width:100%;border-collapse:collapse;font-family:'Segoe UI',sans-serif}
 .tbl-gen thead th{background:#333F48;color:#fff;padding:6px 8px;text-align:center;white-space:nowrap;font-size:10px;position:sticky;top:0;z-index:2;border-right:1px solid #4a5a68}
@@ -71,9 +69,8 @@ body{font-family:'Segoe UI',Tahoma,sans-serif;background:var(--gris);margin:0;di
 .tbl-gen tbody tr:hover td:first-child{background:#dce6f0}
 .tbl-gen tfoot td{background:#333F48;color:#fff;font-weight:800;padding:5px 8px;text-align:center;font-size:10px;border-right:1px solid #4a5a68;position:sticky;bottom:0}
 .tbl-gen tfoot td:first-child{text-align:left}
-/* ── Tablas secundarias (Divisiones, Componentes, Diversas): fuente mayor, $ y centrado ── */
 .tbl-sec-scroll{overflow-x:auto;max-height:520px;overflow-y:auto}
-.tbl-sec-free{overflow-x:auto}  /* sin max-height → sin scroll vertical */
+.tbl-sec-free{overflow-x:auto}
 .tbl-sec{width:100%;border-collapse:collapse;font-family:'Segoe UI',sans-serif}
 .tbl-sec thead th{background:#333F48;color:#fff;padding:8px 10px;text-align:center;white-space:nowrap;font-size:12px;position:sticky;top:0;z-index:2;border-right:1px solid #4a5a68}
 .tbl-sec thead th:first-child{text-align:left;min-width:180px}
@@ -98,14 +95,14 @@ body{font-family:'Segoe UI',Tahoma,sans-serif;background:var(--gris);margin:0;di
 <div class="app-body">
   <nav class="sidebar">
     <div class="nav-group" id="grp1">
-      <div class="nav-group-header open" onclick="toggleGroup('grp1')">
+      <div class="nav-group-header open" data-grp="grp1">
         <span>GASTOS</span><span class="arrow">&#9654;</span>
       </div>
       <div class="nav-children open" id="children-grp1">
-        <button class="tab-btn active" onclick="cambiarVista('herramientas')">Gasto de Herramientas</button>
-        <button class="tab-btn" onclick="cambiarVista('divisiones')">Gasto de Divisiones</button>
-        <button class="tab-btn" onclick="cambiarVista('componentes')">Gasto de Componentes</button>
-        <button class="tab-btn" onclick="cambiarVista('diversas')">Gasto de Cuentas Diversas</button>
+        <button class="tab-btn active" data-tab="herramientas">Gasto de Herramientas</button>
+        <button class="tab-btn" data-tab="divisiones">Gasto de Divisiones</button>
+        <button class="tab-btn" data-tab="componentes">Gasto de Componentes</button>
+        <button class="tab-btn" data-tab="diversas">Gasto de Cuentas Diversas</button>
       </div>
     </div>
   </nav>
@@ -122,440 +119,399 @@ body{font-family:'Segoe UI',Tahoma,sans-serif;background:var(--gris);margin:0;di
       </div>
 
       <div id="mainUI" style="display:none;">
+        <!-- Los paneles se generan dinámicamente por JS para evitar HTML duplicado -->
+        <div id="panels"></div>
+      </div>
 
-        <!-- ══════════ TAB HERRAMIENTAS ══════════ -->
-        <div class="tab-panel active" id="panel-herramientas">
-          <div class="filters-wrap">
-            <div class="filters-row">
-              <div class="f-item"><label>AÑO</label><div class="multiselect" id="h-msANO">Todos...</div><div class="dropdown-content" id="h-optsANO"></div></div>
-              <div class="f-item"><label>MES</label><div class="multiselect" id="h-msMES">Todos...</div><div class="dropdown-content" id="h-optsMES"></div></div>
-              <div class="f-item"><label>ZONA</label><div class="multiselect" id="h-msZONA">Todos...</div><div class="dropdown-content" id="h-optsZONA"></div></div>
-              <div class="f-item"><label>DIVISION</label><div class="multiselect" id="h-msDIVISION">Todos...</div><div class="dropdown-content" id="h-optsDIVISION"></div></div>
-              <button class="btn-clear" onclick="resetFilters('h')">LIMPIAR FILTROS</button>
-            </div>
-            <div class="filters-row">
-              <div class="f-item"><label>CUENTA</label><div class="multiselect" id="h-msCUENTA">HERRAMIENTAS</div><div class="dropdown-content" id="h-optsCUENTA"></div></div>
-              <div class="f-item"><label>CLASIFICACION</label><div class="multiselect" id="h-msCLASIFICACION">Todos...</div><div class="dropdown-content" id="h-optsCLASIFICACION"></div></div>
-              <div class="f-item"><label>SISTEMA</label><div class="multiselect" id="h-msSISTEMA">Todos...</div><div class="dropdown-content" id="h-optsSISTEMA"></div></div>
-              <div class="f-item"><label>COMPONENTE</label><div class="multiselect" id="h-msCOMPONENTE">Todos...</div><div class="dropdown-content" id="h-optsCOMPONENTE"></div></div>
-            </div>
-          </div>
-          <div class="kpi-row">
-            <div class="kpi-card"><div class="kpi-label">Gasto Año Actual</div><div class="kpi-value" id="h-kpi1">—</div><div class="kpi-sub" id="h-kpi1Sub"></div></div>
-            <div class="kpi-card"><div class="kpi-label">Variación vs Año Anterior</div><div class="kpi-value" id="h-kpi2">—</div><div class="kpi-sub" id="h-kpi2Sub"></div></div>
-            <div class="kpi-card"><div class="kpi-label">Gasto Año Anterior</div><div class="kpi-value" id="h-kpi3">—</div><div class="kpi-sub" id="h-kpi3Sub"></div></div>
-            <div class="kpi-card"><div class="kpi-label">Promedio Mensual</div><div class="kpi-value" id="h-kpi4">—</div><div class="kpi-sub" id="h-kpi4Sub"></div></div>
-            <div class="kpi-card"><div class="kpi-label">Mes Mayor Gasto</div><div class="kpi-value" id="h-kpi5">—</div><div class="kpi-sub" id="h-kpi5Sub"></div></div>
-          </div>
-          <div class="chart-title">
-            <span class="ct-dash">GASTO HERRAMIENTAS</span>
-            <span class="ct-zone" id="h-ctZone">Nacional</span>
-            <span class="ct-info" id="h-ctInfo"></span>
-          </div>
-          <div class="chart-container"><canvas id="chartH"></canvas></div>
-          <div class="tabla-wrap">
-            <div class="tabla-toolbar">
-              <span>GASTO POR AÑO Y MES — HERRAMIENTAS</span>
-              <button class="btn-dl" onclick="descargarCSV('h-tbl')">&#11015; Descargar CSV</button>
-            </div>
-            <div class="tbl-h-scroll">
-              <table class="tbl-gen" id="h-tbl">
-                <thead id="h-tblHead"></thead><tbody id="h-tblBody"></tbody><tfoot id="h-tblFoot"></tfoot>
-              </table>
-            </div>
-          </div>
-        </div>
-
-        <!-- ══════════ TAB DIVISIONES ══════════ -->
-        <div class="tab-panel" id="panel-divisiones">
-          <div class="filters-wrap">
-            <div class="filters-row">
-              <div class="f-item"><label>AÑO</label><div class="multiselect" id="d-msANO">Todos...</div><div class="dropdown-content" id="d-optsANO"></div></div>
-              <div class="f-item"><label>MES</label><div class="multiselect" id="d-msMES">Todos...</div><div class="dropdown-content" id="d-optsMES"></div></div>
-              <div class="f-item"><label>ZONA</label><div class="multiselect" id="d-msZONA">Todos...</div><div class="dropdown-content" id="d-optsZONA"></div></div>
-              <div class="f-item"><label>DIVISION</label><div class="multiselect" id="d-msDIVISION">Todos...</div><div class="dropdown-content" id="d-optsDIVISION"></div></div>
-              <button class="btn-clear" onclick="resetFilters('d')">LIMPIAR FILTROS</button>
-            </div>
-            <div class="filters-row">
-              <div class="f-item"><label>CUENTA</label><div class="multiselect" id="d-msCUENTA">HERRAMIENTAS</div><div class="dropdown-content" id="d-optsCUENTA"></div></div>
-              <div class="f-item"><label>CLASIFICACION</label><div class="multiselect" id="d-msCLASIFICACION">Todos...</div><div class="dropdown-content" id="d-optsCLASIFICACION"></div></div>
-              <div class="f-item"><label>SISTEMA</label><div class="multiselect" id="d-msSISTEMA">Todos...</div><div class="dropdown-content" id="d-optsSISTEMA"></div></div>
-              <div class="f-item"><label>COMPONENTE</label><div class="multiselect" id="d-msCOMPONENTE">Todos...</div><div class="dropdown-content" id="d-optsCOMPONENTE"></div></div>
-            </div>
-          </div>
-          <div class="tabla-wrap">
-            <div class="tabla-toolbar">
-              <span id="d-tblTitulo">GASTO POR DIVISIÓN</span>
-              <button class="btn-dl" onclick="descargarCSV('d-tbl')">&#11015; Descargar CSV</button>
-            </div>
-            <div class="tbl-sec-scroll">
-              <table class="tbl-sec" id="d-tbl">
-                <thead id="d-tblHead"></thead><tbody id="d-tblBody"></tbody><tfoot id="d-tblFoot"></tfoot>
-              </table>
-            </div>
-          </div>
-        </div>
-
-        <!-- ══════════ TAB COMPONENTES ══════════ -->
-        <div class="tab-panel" id="panel-componentes">
-          <div class="filters-wrap">
-            <div class="filters-row">
-              <div class="f-item"><label>AÑO</label><div class="multiselect" id="c-msANO">Todos...</div><div class="dropdown-content" id="c-optsANO"></div></div>
-              <div class="f-item"><label>MES</label><div class="multiselect" id="c-msMES">Todos...</div><div class="dropdown-content" id="c-optsMES"></div></div>
-              <div class="f-item"><label>ZONA</label><div class="multiselect" id="c-msZONA">Todos...</div><div class="dropdown-content" id="c-optsZONA"></div></div>
-              <div class="f-item"><label>DIVISION</label><div class="multiselect" id="c-msDIVISION">Todos...</div><div class="dropdown-content" id="c-optsDIVISION"></div></div>
-              <button class="btn-clear" onclick="resetFilters('c')">LIMPIAR FILTROS</button>
-            </div>
-            <div class="filters-row">
-              <div class="f-item"><label>CUENTA</label><div class="multiselect" id="c-msCUENTA">HERRAMIENTAS</div><div class="dropdown-content" id="c-optsCUENTA"></div></div>
-              <div class="f-item"><label>CLASIFICACION</label><div class="multiselect" id="c-msCLASIFICACION">Todos...</div><div class="dropdown-content" id="c-optsCLASIFICACION"></div></div>
-              <div class="f-item"><label>SISTEMA</label><div class="multiselect" id="c-msSISTEMA">Todos...</div><div class="dropdown-content" id="c-optsSISTEMA"></div></div>
-              <div class="f-item"><label>COMPONENTE</label><div class="multiselect" id="c-msCOMPONENTE">Todos...</div><div class="dropdown-content" id="c-optsCOMPONENTE"></div></div>
-            </div>
-          </div>
-          <div class="tabla-wrap">
-            <div class="tabla-toolbar">
-              <span id="c-tblTitulo">GASTO POR COMPONENTE</span>
-              <button class="btn-dl" onclick="descargarCSV('c-tbl')">&#11015; Descargar CSV</button>
-            </div>
-            <!-- Sin max-height = tabla expandida sin scroll vertical -->
-            <div class="tbl-sec-free">
-              <table class="tbl-sec" id="c-tbl">
-                <thead id="c-tblHead"></thead><tbody id="c-tblBody"></tbody><tfoot id="c-tblFoot"></tfoot>
-              </table>
-            </div>
-          </div>
-        </div>
-
-        <!-- ══════════ TAB DIVERSAS ══════════ -->
-        <div class="tab-panel" id="panel-diversas">
-          <div class="filters-wrap">
-            <div class="filters-row">
-              <div class="f-item"><label>AÑO</label><div class="multiselect" id="v-msANO">Todos...</div><div class="dropdown-content" id="v-optsANO"></div></div>
-              <div class="f-item"><label>MES</label><div class="multiselect" id="v-msMES">Todos...</div><div class="dropdown-content" id="v-optsMES"></div></div>
-              <div class="f-item"><label>ZONA</label><div class="multiselect" id="v-msZONA">Todos...</div><div class="dropdown-content" id="v-optsZONA"></div></div>
-              <div class="f-item"><label>DIVISION</label><div class="multiselect" id="v-msDIVISION">Todos...</div><div class="dropdown-content" id="v-optsDIVISION"></div></div>
-              <button class="btn-clear" onclick="resetFilters('v')">LIMPIAR FILTROS</button>
-            </div>
-            <div class="filters-row">
-              <div class="f-item"><label>CUENTA</label><div class="multiselect" id="v-msCUENTA">Todos...</div><div class="dropdown-content" id="v-optsCUENTA"></div></div>
-              <div class="f-item"><label>CLASIFICACION</label><div class="multiselect" id="v-msCLASIFICACION">Todos...</div><div class="dropdown-content" id="v-optsCLASIFICACION"></div></div>
-              <div class="f-item"><label>SISTEMA</label><div class="multiselect" id="v-msSISTEMA">Todos...</div><div class="dropdown-content" id="v-optsSISTEMA"></div></div>
-              <div class="f-item"><label>COMPONENTE</label><div class="multiselect" id="v-msCOMPONENTE">Todos...</div><div class="dropdown-content" id="v-optsCOMPONENTE"></div></div>
-            </div>
-          </div>
-          <div class="tabla-wrap">
-            <div class="tabla-toolbar">
-              <span id="v-tblTitulo">GASTO POR CUENTA DIVERSA</span>
-              <button class="btn-dl" onclick="descargarCSV('v-tbl')">&#11015; Descargar CSV</button>
-            </div>
-            <div class="tbl-sec-scroll">
-              <table class="tbl-sec" id="v-tbl">
-                <thead id="v-tblHead"></thead><tbody id="v-tblBody"></tbody><tfoot id="v-tblFoot"></tfoot>
-              </table>
-            </div>
-          </div>
-        </div>
-
-      </div><!-- /mainUI -->
     </div>
   </div>
 </div>
 
 <script>
 'use strict';
-const EXCEL_URL    = 'Gastoherramientas.xlsx';
+
+/* ═════════════════════════════════════════════════════════════════════
+   CONSTANTES
+   ═════════════════════════════════════════════════════════════════════ */
+const EXCEL_URL = 'Gastoherramientas.xlsx';
 const MC = ['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SEP','OCT','NOV','DIC'];
 const MN = ['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'];
 const ALL12 = [1,2,3,4,5,6,7,8,9,10,11,12];
+const FILTER_FIELDS = ['ANO','MES','ZONA','DIVISION','CUENTA','CLASIFICACION','SISTEMA','COMPONENTE'];
 
-let rawData=[], charts={}, allYearsG=[];
-const $ = id => document.getElementById(id);
+// Configuración de cada pestaña
+const TABS = [
+  { id:'herramientas', prefix:'h', label:'Gasto de Herramientas',  defaultCuenta:['HERRAMIENTAS'], tableKind:'H' },
+  { id:'divisiones',   prefix:'d', label:'Gasto de Divisiones',    defaultCuenta:['HERRAMIENTAS'], tableKind:'SEC', groupField:'DIVISION',   groupLabel:'DIVISIÓN',   tableClass:'tbl-sec-scroll' },
+  { id:'componentes',  prefix:'c', label:'Gasto de Componentes',   defaultCuenta:['HERRAMIENTAS'], tableKind:'SEC', groupField:'COMPONENTE', groupLabel:'COMPONENTE', tableClass:'tbl-sec-free' },
+  { id:'diversas',     prefix:'v', label:'Gasto de Cuentas Diversas', defaultCuenta:[],           tableKind:'SEC', groupField:'CUENTA',     groupLabel:'CUENTA',     tableClass:'tbl-sec-scroll' }
+];
 
-let tabF = {
-  h:{ ANO:[], MES:[], ZONA:[], DIVISION:[], CUENTA:['HERRAMIENTAS'], CLASIFICACION:[], SISTEMA:[], COMPONENTE:[] },
-  d:{ ANO:[], MES:[], ZONA:[], DIVISION:[], CUENTA:['HERRAMIENTAS'], CLASIFICACION:[], SISTEMA:[], COMPONENTE:[] },
-  c:{ ANO:[], MES:[], ZONA:[], DIVISION:[], CUENTA:['HERRAMIENTAS'], CLASIFICACION:[], SISTEMA:[], COMPONENTE:[] },
-  v:{ ANO:[], MES:[], ZONA:[], DIVISION:[], CUENTA:[], CLASIFICACION:[], SISTEMA:[], COMPONENTE:[] }
-};
-let curTab='herramientas';
+/* ═════════════════════════════════════════════════════════════════════
+   ESTADO GLOBAL
+   ═════════════════════════════════════════════════════════════════════ */
+let rawData = [];
+let uniqueCache = {};        // valores únicos por campo (calculado una sola vez)
+let allYearsG = [];
+let charts = {};
+let currentTab = 'herramientas';
+let renderScheduled = false; // para debouncing
 
-function toggleGroup(id){
-  const h=document.querySelector(`[onclick="toggleGroup('${id}')"]`),c=$(`children-${id}`);
-  if(h&&c){h.classList.toggle('open');c.classList.toggle('open');}
-}
-function cambiarVista(tab){
-  curTab=tab;
-  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
-  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
-  const m={herramientas:0,divisiones:1,componentes:2,diversas:3};
-  document.querySelectorAll('.tab-btn')[m[tab]].classList.add('active');
-  $(`panel-${tab}`).classList.add('active');
-  renderTab(tab);
-}
-document.addEventListener('click',e=>{
-  // Si el click está DENTRO de cualquier dropdown-content o multiselect, no cerrar
-  if(e.target.closest('.dropdown-content')) return;
-  if(e.target.closest('.multiselect')) return;
-  // Click afuera → cerrar todos los dropdowns
-  document.querySelectorAll('.dropdown-content').forEach(d=>d.classList.remove('open'));
+// Filtros por pestaña
+const tabF = {};
+TABS.forEach(t => {
+  tabF[t.prefix] = Object.fromEntries(FILTER_FIELDS.map(f => [f, []]));
+  tabF[t.prefix].CUENTA = [...t.defaultCuenta];
 });
-function bindDD(pfx,fld){
-  const ms=$(`${pfx}-ms${fld}`),dd=$(`${pfx}-opts${fld}`);
-  if(!ms||!dd) return;
-  // Marcar handlers como ya instalados para no duplicarlos si bindDD se llama varias veces
-  if(ms._boundDD) return;
-  ms._boundDD = true;
-  ms.addEventListener('click',ev=>{
-    ev.stopPropagation();
-    const was=dd.classList.contains('open');
-    document.querySelectorAll('.dropdown-content').forEach(d=>d.classList.remove('open'));
-    if(!was) dd.classList.add('open');
-  });
-  // Delegación: un solo listener de 'change' en el dropdown contenedor
-  dd.addEventListener('change',ev=>{
-    if(ev.target.type!=='checkbox') return;
-    hfc(pfx,fld);
-  });
+
+/* ═════════════════════════════════════════════════════════════════════
+   HELPERS
+   ═════════════════════════════════════════════════════════════════════ */
+const $ = id => document.getElementById(id);
+const fP = v => (v && v>0) ? '$'+Math.round(v).toLocaleString('es-MX') : '-';
+const tabByPrefix = p => TABS.find(t => t.prefix===p);
+const tabById = id => TABS.find(t => t.id===id);
+
+/* ═════════════════════════════════════════════════════════════════════
+   CONSTRUCCIÓN DE LA UI (paneles y filtros)
+   ═════════════════════════════════════════════════════════════════════ */
+function buildFilterRow(p){
+  // Genera el HTML de los 2 filas de filtros + botón LIMPIAR
+  const row1 = ['ANO','MES','ZONA','DIVISION'];
+  const row2 = ['CUENTA','CLASIFICACION','SISTEMA','COMPONENTE'];
+  const mk = f => `
+    <div class="f-item">
+      <label>${f}</label>
+      <div class="multiselect" id="${p}-ms${f}">Todos...</div>
+      <div class="dropdown-content" id="${p}-opts${f}"></div>
+    </div>`;
+  return `
+    <div class="filters-wrap">
+      <div class="filters-row">
+        ${row1.map(mk).join('')}
+        <button class="btn-clear" data-reset="${p}">LIMPIAR FILTROS</button>
+      </div>
+      <div class="filters-row">${row2.map(mk).join('')}</div>
+    </div>`;
 }
 
-// ── Load (optimizado) ──
-// Cache global de valores únicos por campo — se calcula UNA SOLA VEZ
-let uniqueCache = {};
+function buildPanelHTML(t){
+  const filters = buildFilterRow(t.prefix);
+  if(t.tableKind==='H'){
+    return `
+      <div class="tab-panel active" id="panel-${t.id}">
+        ${filters}
+        <div class="kpi-row">
+          ${[1,2,3,4,5].map(i=>`
+            <div class="kpi-card">
+              <div class="kpi-label" id="h-kpi${i}Lbl">KPI ${i}</div>
+              <div class="kpi-value" id="h-kpi${i}">—</div>
+              <div class="kpi-sub" id="h-kpi${i}Sub"></div>
+            </div>`).join('')}
+        </div>
+        <div class="chart-title">
+          <span class="ct-dash">GASTO HERRAMIENTAS</span>
+          <span class="ct-zone" id="h-ctZone">Nacional</span>
+          <span class="ct-info" id="h-ctInfo"></span>
+        </div>
+        <div class="chart-container"><canvas id="chartH"></canvas></div>
+        <div class="tabla-wrap">
+          <div class="tabla-toolbar">
+            <span>GASTO POR AÑO Y MES — HERRAMIENTAS</span>
+            <button class="btn-dl" data-csv="h-tbl">&#11015; Descargar CSV</button>
+          </div>
+          <div class="tbl-h-scroll">
+            <table class="tbl-gen" id="h-tbl">
+              <thead id="h-tblHead"></thead><tbody id="h-tblBody"></tbody><tfoot id="h-tblFoot"></tfoot>
+            </table>
+          </div>
+        </div>
+      </div>`;
+  }
+  // SEC (divisiones/componentes/diversas)
+  return `
+    <div class="tab-panel" id="panel-${t.id}">
+      ${filters}
+      <div class="tabla-wrap">
+        <div class="tabla-toolbar">
+          <span id="${t.prefix}-tblTitulo">${t.label.toUpperCase()}</span>
+          <button class="btn-dl" data-csv="${t.prefix}-tbl">&#11015; Descargar CSV</button>
+        </div>
+        <div class="${t.tableClass}">
+          <table class="tbl-sec" id="${t.prefix}-tbl">
+            <thead id="${t.prefix}-tblHead"></thead><tbody id="${t.prefix}-tblBody"></tbody><tfoot id="${t.prefix}-tblFoot"></tfoot>
+          </table>
+        </div>
+      </div>
+    </div>`;
+}
 
+function renderPanels(){
+  $('panels').innerHTML = TABS.map(buildPanelHTML).join('');
+  // Establecer solo el primer panel como activo
+  document.querySelectorAll('.tab-panel').forEach((p,i) => p.classList.toggle('active', i===0));
+}
+
+/* ═════════════════════════════════════════════════════════════════════
+   CARGA DEL EXCEL (optimizado)
+   ═════════════════════════════════════════════════════════════════════ */
 function procesar(buf){
   const t0 = performance.now();
-  // Parse Excel con opciones ligeras: sin estilos, sin formulas, solo arrays de valores
-  const wb = XLSX.read(buf,{type:'array',cellDates:true,cellFormula:false,cellHTML:false,cellStyles:false,sheetStubs:false});
+  const wb = XLSX.read(buf, {type:'array', cellDates:true, cellFormula:false, cellHTML:false, cellStyles:false, sheetStubs:false});
   const sheet = wb.Sheets[wb.SheetNames[0]];
   const range = XLSX.utils.decode_range(sheet['!ref']);
 
-  // Leer encabezados (fila 0)
+  // Leer encabezados
   const headers = [];
   for(let c=range.s.c; c<=range.e.c; c++){
     const cell = sheet[XLSX.utils.encode_cell({r:range.s.r, c})];
     headers.push(cell ? String(cell.v).trim().toUpperCase() : '');
   }
-  // Índices de columnas que nos interesan (más rápido que lookup por nombre)
-  const idx = {
-    FECHA:     headers.indexOf('FECHA CONTABLE'),
-    IMPORTE:   headers.indexOf('IMPORTE'),
-    CUENTA:    headers.indexOf('CUENTA'),
-    CLAS:      headers.indexOf('CLASIFICACION'),
-    SIS:       headers.indexOf('SISTEMA'),
-    COMP:      headers.indexOf('COMPONENTE'),
-    DIV:       headers.indexOf('DIVISION'),
-    ZONA:      headers.indexOf('ZONA')
-  };
+  const colIdx = name => headers.indexOf(name);
+  const iFecha = colIdx('FECHA CONTABLE'), iImp = colIdx('IMPORTE');
+  const iCta = colIdx('CUENTA'), iCla = colIdx('CLASIFICACION');
+  const iSis = colIdx('SISTEMA'), iCom = colIdx('COMPONENTE');
+  const iDiv = colIdx('DIVISION'), iZon = colIdx('ZONA');
 
-  // Recorrer celdas directamente — mucho más rápido que sheet_to_json
   const out = new Array(range.e.r - range.s.r);
   let outIdx = 0;
-  // Sets para acumular valores únicos en una sola pasada
-  const uCuenta = new Set(), uClas = new Set(), uSis = new Set(),
-        uComp  = new Set(), uDiv  = new Set(), uZona = new Set(), uYears = new Set();
+  const uCta = new Set(), uCla = new Set(), uSis = new Set(),
+        uCom = new Set(), uDiv = new Set(), uZon = new Set(), uYears = new Set();
 
+  // Helper inline: obtener string de celda por fila/col
+  const encode = XLSX.utils.encode_cell;
   for(let r=range.s.r+1; r<=range.e.r; r++){
-    const getC = c => { const k = XLSX.utils.encode_cell({r,c}); return sheet[k]; };
-
-    const fechaCell = getC(idx.FECHA);
+    const fc = sheet[encode({r, c:iFecha})];
     let yr=0, mo=0;
-    if(fechaCell){
-      const d = fechaCell.v instanceof Date ? fechaCell.v : new Date(fechaCell.v);
+    if(fc){
+      const d = fc.v instanceof Date ? fc.v : new Date(fc.v);
       if(!isNaN(d)){ yr=d.getFullYear(); mo=d.getMonth()+1; }
     }
-    const impCell = getC(idx.IMPORTE);
-    const imp = impCell ? Math.abs(+impCell.v||0) : 0;
+    const ic = sheet[encode({r, c:iImp})];
+    const imp = ic ? Math.abs(+ic.v||0) : 0;
 
-    const getStr = c => { const cell = getC(c); return cell ? String(cell.v).trim() : ''; };
-    const cuenta = getStr(idx.CUENTA);
-    const clas   = getStr(idx.CLAS);
-    const sis    = getStr(idx.SIS);
-    const comp   = getStr(idx.COMP);
-    const divn   = getStr(idx.DIV);
-    const zona   = getStr(idx.ZONA);
+    const cta = (c=sheet[encode({r,c:iCta})]) => c?String(c.v).trim():'';
+    // inline extraction
+    const _cta = sheet[encode({r,c:iCta})], cuenta = _cta?String(_cta.v).trim():'';
+    const _cla = sheet[encode({r,c:iCla})], clas   = _cla?String(_cla.v).trim():'';
+    const _sis = sheet[encode({r,c:iSis})], sis    = _sis?String(_sis.v).trim():'';
+    const _com = sheet[encode({r,c:iCom})], comp   = _com?String(_com.v).trim():'';
+    const _div = sheet[encode({r,c:iDiv})], divn   = _div?String(_div.v).trim():'';
+    const _zon = sheet[encode({r,c:iZon})], zona   = _zon?String(_zon.v).trim():'';
 
-    // Acumular únicos (O(1) por Set.add)
-    if(yr)    uYears.add(yr);
-    if(cuenta) uCuenta.add(cuenta);
-    if(clas)   uClas.add(clas);
+    if(yr)     uYears.add(yr);
+    if(cuenta) uCta.add(cuenta);
+    if(clas)   uCla.add(clas);
     if(sis)    uSis.add(sis);
-    if(comp)   uComp.add(comp);
+    if(comp)   uCom.add(comp);
     if(divn)   uDiv.add(divn);
-    if(zona)   uZona.add(zona);
+    if(zona)   uZon.add(zona);
 
-    out[outIdx++] = {
-      _Y: yr, _M: mo, _IMP: imp,
-      CUENTA: cuenta, CLASIFICACION: clas, SISTEMA: sis,
-      COMPONENTE: comp, DIVISION: divn, ZONA: zona
-    };
+    out[outIdx++] = {_Y:yr, _M:mo, _IMP:imp, CUENTA:cuenta, CLASIFICACION:clas, SISTEMA:sis, COMPONENTE:comp, DIVISION:divn, ZONA:zona};
   }
   out.length = outIdx;
   rawData = out;
 
-  // Ordenar unicos una sola vez y cachear
   allYearsG = [...uYears].sort((a,b)=>a-b);
   uniqueCache = {
-    ANO: allYearsG,
-    MES: MN,
-    ZONA: [...uZona].sort(),
-    DIVISION: [...uDiv].sort(),
-    CUENTA: [...uCuenta].sort(),
-    CLASIFICACION: [...uClas].sort(),
-    SISTEMA: [...uSis].sort(),
-    COMPONENTE: [...uComp].sort()
+    ANO: allYearsG, MES: MN,
+    ZONA: [...uZon].sort(), DIVISION: [...uDiv].sort(),
+    CUENTA: [...uCta].sort(), CLASIFICACION: [...uCla].sort(),
+    SISTEMA: [...uSis].sort(), COMPONENTE: [...uCom].sort()
   };
 
-  console.log('Excel parseado en', (performance.now()-t0).toFixed(0), 'ms —', rawData.length, 'filas');
+  console.log(`Excel parseado en ${(performance.now()-t0).toFixed(0)} ms — ${rawData.length} filas`);
 
+  // Construir UI una vez que tenemos los datos
+  renderPanels();
   $('mainUI').style.display='block';
   $('uploadArea').style.display='none';
-  ['h','d','c','v'].forEach(p=>buildF(p));
-  setTimeout(()=>{ setCC('h');setCC('d');setCC('c'); },50);
+
+  // Construir filtros de todas las pestañas
+  TABS.forEach(t => buildF(t.prefix));
   renderTab('herramientas');
 }
-function setCC(p){
-  const dd=$(`${p}-optsCUENTA`); if(!dd) return;
-  dd.querySelectorAll('input').forEach(cb=>{cb.checked=(cb.value==='HERRAMIENTAS');});
-  tabF[p].CUENTA=['HERRAMIENTAS']; $(`${p}-msCUENTA`).innerText='HERRAMIENTAS';
-}
-window.addEventListener('load',()=>{
-  fetch(EXCEL_URL+'?v='+Date.now(),{cache:'no-store'}).then(r=>{if(!r.ok)throw 0;return r.arrayBuffer();}).then(procesar)
-  .catch(()=>{$('autoLoadMsg').style.display='none';$('manualLoad').style.display='block';});
-});
-document.addEventListener('change',e=>{
-  if(e.target.id!=='fileInput') return;
-  const rd=new FileReader();rd.onload=ev=>procesar(ev.target.result);rd.readAsArrayBuffer(e.target.files[0]);
-});
 
-// ── Filtros ──
+/* ═════════════════════════════════════════════════════════════════════
+   FILTROS
+   ═════════════════════════════════════════════════════════════════════ */
 function buildF(p){
-  ['ANO','MES','ZONA','DIVISION','CUENTA','CLASIFICACION','SISTEMA','COMPONENTE'].forEach(fld=>{
-    const dd=$(`${p}-opts${fld}`); if(!dd) return;
-    bindDD(p,fld);
-    // Usar cache en lugar de recalcular únicos recorriendo 75k filas cada vez
+  FILTER_FIELDS.forEach(fld => {
+    const dd = $(`${p}-opts${fld}`);
+    if(!dd) return;
     const vals = uniqueCache[fld] || [];
-    dd.innerHTML=vals.map(v=>`<label><input type="checkbox" value="${v}"> ${v}</label>`).join('');
-    const sel=new Set(tabF[p][fld]||[]);
-    dd.querySelectorAll('input').forEach(cb=>cb.checked=sel.has(cb.value)||sel.has(Number(cb.value)));
-    const ms=$(`${p}-ms${fld}`); if(ms) ms.innerText=tabF[p][fld].length?tabF[p][fld].join(', '):'Todos...';
+    const selected = new Set(tabF[p][fld] || []);
+    dd.innerHTML = vals.map(v => {
+      const checked = (selected.has(v) || selected.has(Number(v))) ? ' checked' : '';
+      return `<label><input type="checkbox" value="${v}"${checked}> ${v}</label>`;
+    }).join('');
+    const ms = $(`${p}-ms${fld}`);
+    if(ms) ms.innerText = tabF[p][fld].length ? tabF[p][fld].join(', ') : 'Todos...';
   });
 }
-function hfc(p,fld){
-  const dd=$(`${p}-opts${fld}`); if(!dd) return;
-  tabF[p][fld]=Array.from(dd.querySelectorAll('input:checked')).map(i=>fld==='ANO'?Number(i.value):i.value);
-  const ms=$(`${p}-ms${fld}`); if(ms) ms.innerText=tabF[p][fld].length?tabF[p][fld].join(', '):'Todos...';
-  renderTab(curTab);
-}
-function resetFilters(p){
-  const dc=p==='v'?[]:['HERRAMIENTAS'];
-  tabF[p]={ANO:[],MES:[],ZONA:[],DIVISION:[],CUENTA:dc,CLASIFICACION:[],SISTEMA:[],COMPONENTE:[]};
-  buildF(p); if(p!=='v') setCC(p); renderTab(curTab);
+
+function onFilterChange(p, fld){
+  const dd = $(`${p}-opts${fld}`);
+  if(!dd) return;
+  tabF[p][fld] = Array.from(dd.querySelectorAll('input:checked'))
+    .map(i => fld==='ANO' ? Number(i.value) : i.value);
+  const ms = $(`${p}-ms${fld}`);
+  if(ms) ms.innerText = tabF[p][fld].length ? tabF[p][fld].join(', ') : 'Todos...';
+  scheduleRender();
 }
 
-// ── Filter helpers ──
+// Debouncing: agrupa renders en un solo frame
+function scheduleRender(){
+  if(renderScheduled) return;
+  renderScheduled = true;
+  requestAnimationFrame(() => {
+    renderScheduled = false;
+    renderTab(currentTab);
+  });
+}
+
+function resetFilters(p){
+  const t = tabByPrefix(p);
+  tabF[p] = Object.fromEntries(FILTER_FIELDS.map(f => [f, []]));
+  tabF[p].CUENTA = [...t.defaultCuenta];
+  buildF(p);
+  renderTab(currentTab);
+}
+
+/* ═════════════════════════════════════════════════════════════════════
+   FILTRADO DE DATOS
+   ═════════════════════════════════════════════════════════════════════ */
 function applyF(p, ignoreYear){
-  const f=tabF[p];
-  // Pre-compute Set objects for O(1) lookup instead of O(n) Array.includes
-  const setAno = (!ignoreYear && f.ANO.length) ? new Set(f.ANO) : null;
-  const setMes = f.MES.length ? new Set(f.MES) : null;
-  const setZona = f.ZONA.length ? new Set(f.ZONA) : null;
-  const setDiv = f.DIVISION.length ? new Set(f.DIVISION) : null;
-  const setCta = f.CUENTA.length ? new Set(f.CUENTA) : null;
-  const setCla = f.CLASIFICACION.length ? new Set(f.CLASIFICACION) : null;
-  const setSis = f.SISTEMA.length ? new Set(f.SISTEMA) : null;
-  const setCom = f.COMPONENTE.length ? new Set(f.COMPONENTE) : null;
+  const f = tabF[p];
+  const sA = (!ignoreYear && f.ANO.length) ? new Set(f.ANO) : null;
+  const sM = f.MES.length ? new Set(f.MES) : null;
+  const sZ = f.ZONA.length ? new Set(f.ZONA) : null;
+  const sD = f.DIVISION.length ? new Set(f.DIVISION) : null;
+  const sC = f.CUENTA.length ? new Set(f.CUENTA) : null;
+  const sCl= f.CLASIFICACION.length ? new Set(f.CLASIFICACION) : null;
+  const sS = f.SISTEMA.length ? new Set(f.SISTEMA) : null;
+  const sCo= f.COMPONENTE.length ? new Set(f.COMPONENTE) : null;
   const out = [];
   const n = rawData.length;
   for(let i=0; i<n; i++){
     const d = rawData[i];
-    if(setAno && !setAno.has(d['_Y'])) continue;
-    if(setMes && !setMes.has(MN[d['_M']-1])) continue;
-    if(setZona && !setZona.has(d.ZONA)) continue;
-    if(setDiv && !setDiv.has(d.DIVISION)) continue;
-    if(setCta && !setCta.has(d.CUENTA)) continue;
-    if(setCla && !setCla.has(d.CLASIFICACION)) continue;
-    if(setSis && !setSis.has(d.SISTEMA)) continue;
-    if(setCom && !setCom.has(d.COMPONENTE)) continue;
+    if(sA  && !sA.has(d._Y)) continue;
+    if(sM  && !sM.has(MN[d._M-1])) continue;
+    if(sZ  && !sZ.has(d.ZONA)) continue;
+    if(sD  && !sD.has(d.DIVISION)) continue;
+    if(sC  && !sC.has(d.CUENTA)) continue;
+    if(sCl && !sCl.has(d.CLASIFICACION)) continue;
+    if(sS  && !sS.has(d.SISTEMA)) continue;
+    if(sCo && !sCo.has(d.COMPONENTE)) continue;
     out.push(d);
   }
   return out;
 }
 
-function renderTab(tab){
-  const pm={herramientas:'h',divisiones:'d',componentes:'c',diversas:'v'};
-  const p=pm[tab];
-  if(tab==='herramientas') renderH(p);
-  else if(tab==='divisiones') renderSec(p,'DIVISION','DIVISIÓN','d-tblTitulo');
-  else if(tab==='componentes') renderSec(p,'COMPONENTE','COMPONENTE','c-tblTitulo');
-  else renderSec(p,'CUENTA','CUENTA','v-tblTitulo');
+/* ═════════════════════════════════════════════════════════════════════
+   RENDER
+   ═════════════════════════════════════════════════════════════════════ */
+function renderTab(tabId){
+  const t = tabById(tabId);
+  if(!t) return;
+  if(t.tableKind==='H') renderH(t.prefix);
+  else renderSec(t);
 }
 
-function fP(v){ return (v&&v>0)?'$'+Math.round(v).toLocaleString('es-MX'):'-'; }
-
-// ── HERRAMIENTAS ──
+// ── Pestaña HERRAMIENTAS ──
 function renderH(p){
-  const selYears=tabF[p].ANO.slice().sort();
-  // curYear = max selected, or latest from all data ignoring year filter
-  const noYearData=applyF(p,true);
-  const allDataYears=[...new Set(noYearData.map(d=>d['_Y']))].filter(Boolean).sort();
-  const curYear=selYears.length?selYears[selYears.length-1]:(allDataYears[allDataYears.length-1]||new Date().getFullYear());
-  const prevYear=curYear-1;
+  const selYears = tabF[p].ANO.slice().sort();
+  const noYearData = applyF(p, true);
 
-  // Build byYM ignoring year filter (so prev year always available)
-  const byYM={};
-  noYearData.forEach(d=>{ const k=`${d['_Y']}-${d['_M']}`; byYM[k]=(byYM[k]||0)+d['_IMP']; });
+  // Agrupar por año-mes en una sola pasada
+  const byYM = {};
+  const yearsSet = new Set();
+  for(let i=0; i<noYearData.length; i++){
+    const d = noYearData[i];
+    const k = `${d._Y}-${d._M}`;
+    byYM[k] = (byYM[k]||0) + d._IMP;
+    yearsSet.add(d._Y);
+  }
 
-  const dCur =ALL12.map(m=>byYM[`${curYear}-${m}`]||0);
-  const dPrev=ALL12.map(m=>byYM[`${prevYear}-${m}`]||0);
-  const labels=ALL12.map(m=>MC[m-1]);
+  const allDataYears = [...yearsSet].sort((a,b)=>a-b);
+  const curYear = selYears.length ? selYears[selYears.length-1] : (allDataYears[allDataYears.length-1] || new Date().getFullYear());
+  const prevYear = curYear - 1;
+
+  const dCur  = ALL12.map(m => byYM[`${curYear}-${m}`]  || 0);
+  const dPrev = ALL12.map(m => byYM[`${prevYear}-${m}`] || 0);
 
   // KPIs
-  const sumCur=dCur.reduce((a,b)=>a+b,0);
-  const sumPrevSame=ALL12.reduce((a,m,i)=>a+(dCur[i]>0?(dPrev[i]||0):0),0);
-  const varPct=sumPrevSame>0?((sumCur-sumPrevSame)/sumPrevSame)*100:0;
-  const nMes=dCur.filter(v=>v>0).length||1;
-  const maxVal=Math.max(...dCur.filter(v=>v>0),0);
-  const maxMes=maxVal>0?MC[dCur.indexOf(maxVal)]:'-';
+  const sumCur = dCur.reduce((a,b)=>a+b, 0);
+  const sumPrevSame = ALL12.reduce((a,m,i) => a + (dCur[i]>0 ? (dPrev[i]||0) : 0), 0);
+  const varPct = sumPrevSame>0 ? ((sumCur-sumPrevSame)/sumPrevSame)*100 : 0;
+  const nMes = dCur.filter(v => v>0).length || 1;
+  const maxVal = Math.max(...dCur.filter(v => v>0), 0);
+  const maxMes = maxVal>0 ? MC[dCur.indexOf(maxVal)] : '-';
 
-  $('h-kpi1').textContent=fP(sumCur); $('h-kpi1Sub').textContent=`Año ${curYear}`;
-  const arr=varPct>0?'▲':varPct<0?'▼':'●', cls=varPct>0?'up':varPct<0?'down':'flat';
-  $('h-kpi2').innerHTML=`<span class="kpi-delta ${cls}">${arr} ${Math.abs(varPct).toFixed(1)}%</span>`;
-  $('h-kpi2Sub').textContent=`vs ${prevYear}`;
-  $('h-kpi3').textContent=fP(sumPrevSame); $('h-kpi3Sub').textContent=`Año ${prevYear}`;
-  $('h-kpi4').textContent=fP(sumCur/nMes); $('h-kpi4Sub').textContent='Mensual';
-  $('h-kpi5').textContent=maxMes; $('h-kpi5Sub').textContent=fP(maxVal);
-  $('h-ctZone').textContent=tabF[p].DIVISION.length?tabF[p].DIVISION.join(', '):'Nacional';
-  $('h-ctInfo').textContent=`${prevYear} vs ${curYear}`;
+  // Pintar KPIs
+  const arrow = varPct>0 ? '▲' : varPct<0 ? '▼' : '●';
+  const cls   = varPct>0 ? 'up' : varPct<0 ? 'down' : 'flat';
 
-  // Chart
-  if(charts['h']){charts['h'].destroy();charts['h']=null;}
-  const cv=$('chartH');
-  const yMax=Math.max(...dCur,...dPrev,1)*1.25;
-  charts['h']=new Chart(cv,{
-    data:{labels,datasets:[
-      // Barras año actual — order:0 = se dibuja ENCIMA
-      {label:String(curYear),type:'bar',data:dCur,
-       backgroundColor:'#C10230',borderColor:'#a00220',borderWidth:1,order:0},
-      // Área año anterior — order:1 = se dibuja DEBAJO
-      {label:String(prevYear),type:'line',data:dPrev,
-       borderColor:'rgba(0,0,0,0)',backgroundColor:'rgba(180,180,180,0.32)',
-       fill:true,tension:0,pointRadius:0,pointHoverRadius:3,borderWidth:0,order:1}
-    ]},
-    options:{
-      responsive:true,maintainAspectRatio:false,
-      scales:{
-        x:{grid:{display:false}},
-        y:{grid:{display:false},beginAtZero:true,max:yMax,
-           ticks:{callback:v=>'$'+(v/1000).toFixed(0)+'K'}}
+  const kpis = [
+    ['Gasto Año Actual',        fP(sumCur),                                    `Año ${curYear}`],
+    ['Variación vs Año Ant.',   `<span class="kpi-delta ${cls}">${arrow} ${Math.abs(varPct).toFixed(1)}%</span>`, `vs ${prevYear}`],
+    ['Gasto Año Anterior',      fP(sumPrevSame),                               `Año ${prevYear}`],
+    ['Promedio Mensual',        fP(sumCur/nMes),                               'Mensual'],
+    ['Mes Mayor Gasto',         maxMes,                                        fP(maxVal)]
+  ];
+  kpis.forEach(([lbl, val, sub], i) => {
+    const n = i+1;
+    $(`h-kpi${n}Lbl`).textContent = lbl;
+    $(`h-kpi${n}`).innerHTML = val;
+    $(`h-kpi${n}Sub`).textContent = sub;
+  });
+
+  $('h-ctZone').textContent = tabF[p].DIVISION.length ? tabF[p].DIVISION.join(', ') : 'Nacional';
+  $('h-ctInfo').textContent = `${prevYear} vs ${curYear}`;
+
+  // Gráfica
+  drawChart(dCur, dPrev, curYear, prevYear);
+
+  // Tabla: meses filas × años columnas DESC; total por año como fila final
+  const yearsDesc = allDataYears.slice().sort((a,b)=>b-a);
+  const head = $('h-tblHead'), body = $('h-tblBody'), foot = $('h-tblFoot');
+  head.innerHTML = '<tr><th>MES</th>' + yearsDesc.map(y=>`<th>${y}</th>`).join('') + '</tr>';
+  body.innerHTML = ALL12.map(m => {
+    const vals = yearsDesc.map(y => byYM[`${y}-${m}`] || 0);
+    return `<tr><td>${MC[m-1]}</td>${vals.map(v => `<td>${v>0?fP(v):'-'}</td>`).join('')}</tr>`;
+  }).join('');
+  const totByYear = yearsDesc.map(y => ALL12.reduce((a,m) => a + (byYM[`${y}-${m}`]||0), 0));
+  foot.innerHTML = `<tr><td>TOTAL</td>${totByYear.map(v => `<td>${v>0?fP(v):'-'}</td>`).join('')}</tr>`;
+}
+
+// ── Gráfica del dashboard Herramientas ──
+function drawChart(dCur, dPrev, curYear, prevYear){
+  if(charts.h){ charts.h.destroy(); charts.h=null; }
+  const yMax = Math.max(...dCur, ...dPrev, 1) * 1.25;
+  charts.h = new Chart($('chartH'), {
+    data: {
+      labels: MC,
+      datasets: [
+        { label: String(curYear),  type:'bar', data:dCur,
+          backgroundColor:'#C10230', borderColor:'#a00220', borderWidth:1, order:0 },
+        { label: String(prevYear), type:'line', data:dPrev,
+          borderColor:'rgba(0,0,0,0)', backgroundColor:'rgba(180,180,180,0.32)',
+          fill:true, tension:0, pointRadius:0, pointHoverRadius:3, borderWidth:0, order:1 }
+      ]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      scales: {
+        x: { grid:{display:false} },
+        y: { grid:{display:false}, beginAtZero:true, max:yMax,
+             ticks:{callback: v => '$'+(v/1000).toFixed(0)+'K'} }
       },
-      plugins:{
-        legend:{position:'bottom'},
-        tooltip:{
-          mode:'index',
-          intersect:false,
-          callbacks:{
-            label:ctx=>{
+      plugins: {
+        legend: { position:'bottom' },
+        tooltip: {
+          mode:'index', intersect:false,
+          callbacks: {
+            label: ctx => {
               if(ctx.datasetIndex===0 && !(ctx.raw>0)) return null;
               return `${ctx.dataset.label}: ${fP(ctx.raw)}`;
             }
@@ -563,10 +519,10 @@ function renderH(p){
         }
       }
     },
-    plugins:[{
-      id:'barLabels',
+    plugins: [{
+      id: 'barLabels',
       afterDatasetsDraw(chart){
-        const {ctx} = chart;
+        const { ctx } = chart;
         const meta = chart.getDatasetMeta(0);
         if(!meta || meta.type!=='bar') return;
         ctx.save();
@@ -574,79 +530,167 @@ function renderH(p){
         ctx.font = 'bold 10px Segoe UI, sans-serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'top';
+        const data = chart.data.datasets[0].data;
         meta.data.forEach((bar, i) => {
-          const v = chart.data.datasets[0].data[i];
+          const v = data[i];
           if(!(v>0)) return;
-          const label = '$'+Math.round(v).toLocaleString('es-MX');
-          // Dibuja dentro de la barra, en la parte superior (6px desde el tope)
-          ctx.fillText(label, bar.x, bar.y + 6);
+          ctx.fillText('$'+Math.round(v).toLocaleString('es-MX'), bar.x, bar.y + 6);
         });
         ctx.restore();
       }
     }]
   });
-
-  // Tabla: meses en filas (ENE→DIC), años en columnas DESC, total por año al final de cada columna
-  const yearsDesc=[...new Set(noYearData.map(d=>d['_Y']))].filter(Boolean).sort((a,b)=>b-a);
-  const mAsc=[1,2,3,4,5,6,7,8,9,10,11,12];
-  const head=$('h-tblHead'),body=$('h-tblBody'),foot=$('h-tblFoot');
-  head.innerHTML='<tr><th>MES</th>'+yearsDesc.map(yr=>`<th>${yr}</th>`).join('')+'</tr>';
-  body.innerHTML=mAsc.map(m=>{
-    const vals=yearsDesc.map(yr=>byYM[`${yr}-${m}`]||0);
-    return `<tr><td>${MC[m-1]}</td>${vals.map(v=>`<td>${v>0?fP(v):'-'}</td>`).join('')}</tr>`;
-  }).join('');
-  const totByYear=yearsDesc.map(yr=>mAsc.reduce((a,m)=>a+(byYM[`${yr}-${m}`]||0),0));
-  foot.innerHTML=`<tr><td>TOTAL</td>${totByYear.map(v=>`<td>${v>0?fP(v):'-'}</td>`).join('')}</tr>`;
 }
 
-// ── DIVISIONES / COMPONENTES / DIVERSAS (genérica) ──
-function renderSec(p, groupField, groupLabel, titleId){
-  const data=applyF(p,false);
-  const dataYears=[...new Set(data.map(d=>d['_Y']))].sort();
-  const curYear=tabF[p].ANO.length?Math.max(...tabF[p].ANO):(dataYears[dataYears.length-1]||new Date().getFullYear());
-  const curData=data.filter(d=>d['_Y']===curYear);
+// ── Pestañas SEC (divisiones/componentes/diversas) ──
+function renderSec(t){
+  const p = t.prefix;
+  const data = applyF(p, false);
 
-  if($(`${titleId.split('-')[0]}-tblTitulo`)) {
-    const el=$(titleId);
-    if(el) el.textContent=`GASTO POR ${groupLabel} — AÑO ${curYear}`;
+  // Determinar año actual (máx seleccionado o último disponible)
+  let curYear = new Date().getFullYear();
+  if(tabF[p].ANO.length){
+    curYear = Math.max(...tabF[p].ANO);
+  } else {
+    let mx = 0;
+    for(let i=0; i<data.length; i++) if(data[i]._Y > mx) mx = data[i]._Y;
+    if(mx) curYear = mx;
   }
 
-  const grpMap={};
-  curData.forEach(d=>{
-    const g=d[groupField]||'(Sin dato)';
-    if(!grpMap[g]) grpMap[g]={};
-    grpMap[g][d['_M']]=(grpMap[g][d['_M']]||0)+d['_IMP'];
-  });
+  // Agrupar por grupo × mes en una sola pasada
+  const grpMap = {};
+  for(let i=0; i<data.length; i++){
+    const d = data[i];
+    if(d._Y !== curYear) continue;
+    const g = d[t.groupField] || '(Sin dato)';
+    let row = grpMap[g];
+    if(!row){ row = grpMap[g] = new Array(13).fill(0); }  // índices 1..12 + [0] suma total
+    row[d._M] += d._IMP;
+    row[0]    += d._IMP;
+  }
 
-  const sorted=Object.entries(grpMap)
-    .map(([g,mD])=>({g,mD,total:Object.values(mD).reduce((a,b)=>a+b,0)}))
-    .sort((a,b)=>b.total-a.total);
+  const sorted = Object.entries(grpMap)
+    .map(([g, arr]) => ({ g, arr }))
+    .sort((a,b) => b.arr[0] - a.arr[0]);
 
-  // Siempre mostrar los 12 meses completos ENE→DIC
-  const mDesc=[1,2,3,4,5,6,7,8,9,10,11,12];
-  const pfxId=p+'-';
-  const head=$(pfxId+'tblHead'),body=$(pfxId+'tblBody'),foot=$(pfxId+'tblFoot');
+  const titleEl = $(`${p}-tblTitulo`);
+  if(titleEl) titleEl.textContent = `GASTO POR ${t.groupLabel} — AÑO ${curYear}`;
 
-  head.innerHTML=`<tr><th>${groupLabel}</th>${mDesc.map(m=>`<th>${MC[m-1]}</th>`).join('')}<th>TOTAL</th></tr>`;
+  const head = $(`${p}-tblHead`), body = $(`${p}-tblBody`), foot = $(`${p}-tblFoot`);
+  head.innerHTML = `<tr><th>${t.groupLabel}</th>${ALL12.map(m=>`<th>${MC[m-1]}</th>`).join('')}<th>TOTAL</th></tr>`;
 
-  body.innerHTML=sorted.map(({g,mD,total})=>
-    `<tr><td>${g}</td>${mDesc.map(m=>`<td>${mD[m]?fP(mD[m]):'-'}</td>`).join('')}<td>${fP(total)}</td></tr>`
+  body.innerHTML = sorted.map(({g, arr}) =>
+    `<tr><td>${g}</td>${ALL12.map(m => `<td>${arr[m]?fP(arr[m]):'-'}</td>`).join('')}<td>${fP(arr[0])}</td></tr>`
   ).join('');
 
-  const ft=mDesc.map(m=>sorted.reduce((a,s)=>a+(s.mD[m]||0),0));
-  const gt=ft.reduce((a,b)=>a+b,0);
-  foot.innerHTML=`<tr><td>TOTAL</td>${ft.map(v=>`<td>${v>0?fP(v):'-'}</td>`).join('')}<td>${fP(gt)}</td></tr>`;
+  const footVals = ALL12.map(m => sorted.reduce((a,s) => a + s.arr[m], 0));
+  const grand = footVals.reduce((a,b) => a+b, 0);
+  foot.innerHTML = `<tr><td>TOTAL</td>${footVals.map(v => `<td>${v>0?fP(v):'-'}</td>`).join('')}<td>${fP(grand)}</td></tr>`;
 }
 
-// ── CSV ──
-function descargarCSV(tblId){
-  const t=$(tblId); if(!t) return;
-  const csv='\uFEFF'+[...t.querySelectorAll('tr')].map(r=>[...r.querySelectorAll('th,td')].map(c=>'"'+c.textContent.trim().replace(/"/g,'""')+'"').join(',')).join('\n');
-  const a=document.createElement('a');
-  a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8;'}));
-  a.download=tblId.replace('-','_')+'_datos.csv';
-  document.body.appendChild(a);a.click();document.body.removeChild(a);
+/* ═════════════════════════════════════════════════════════════════════
+   UI HANDLERS (navegación, dropdowns, CSV)
+   ═════════════════════════════════════════════════════════════════════ */
+function cambiarVista(tabId){
+  currentTab = tabId;
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab===tabId));
+  document.querySelectorAll('.tab-panel').forEach(pnl => pnl.classList.toggle('active', pnl.id===`panel-${tabId}`));
+  renderTab(tabId);
 }
+
+function descargarCSV(tblId){
+  const tbl = $(tblId);
+  if(!tbl) return;
+  const csv = '﻿' + [...tbl.querySelectorAll('tr')].map(r =>
+    [...r.querySelectorAll('th,td')].map(c => '"'+c.textContent.trim().replace(/"/g,'""')+'"').join(',')
+  ).join('\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv], {type:'text/csv;charset=utf-8;'}));
+  a.download = tblId.replace('-','_')+'_datos.csv';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+}
+
+/* ═════════════════════════════════════════════════════════════════════
+   EVENT DELEGATION (un solo listener para todo)
+   ═════════════════════════════════════════════════════════════════════ */
+
+// Click global: navegación, dropdowns, CSV, reset
+document.addEventListener('click', e => {
+  const tgt = e.target;
+
+  // Tab button
+  const tabBtn = tgt.closest('[data-tab]');
+  if(tabBtn){ cambiarVista(tabBtn.dataset.tab); return; }
+
+  // Nav group toggle
+  const grpHdr = tgt.closest('[data-grp]');
+  if(grpHdr){
+    const id = grpHdr.dataset.grp;
+    grpHdr.classList.toggle('open');
+    $(`children-${id}`).classList.toggle('open');
+    return;
+  }
+
+  // Reset button
+  const resetBtn = tgt.closest('[data-reset]');
+  if(resetBtn){ resetFilters(resetBtn.dataset.reset); return; }
+
+  // CSV download
+  const csvBtn = tgt.closest('[data-csv]');
+  if(csvBtn){ descargarCSV(csvBtn.dataset.csv); return; }
+
+  // Multiselect toggle
+  const ms = tgt.closest('.multiselect');
+  if(ms){
+    const dd = ms.nextElementSibling;
+    if(dd && dd.classList.contains('dropdown-content')){
+      const wasOpen = dd.classList.contains('open');
+      document.querySelectorAll('.dropdown-content').forEach(d => d.classList.remove('open'));
+      if(!wasOpen) dd.classList.add('open');
+    }
+    return;
+  }
+
+  // Click dentro de un dropdown → no cerrar
+  if(tgt.closest('.dropdown-content')) return;
+
+  // Click afuera → cerrar todos los dropdowns abiertos
+  document.querySelectorAll('.dropdown-content.open').forEach(d => d.classList.remove('open'));
+});
+
+// Change global: checkboxes de filtros
+document.addEventListener('change', e => {
+  const tgt = e.target;
+
+  // File upload
+  if(tgt.id==='fileInput'){
+    const rd = new FileReader();
+    rd.onload = ev => procesar(ev.target.result);
+    rd.readAsArrayBuffer(tgt.files[0]);
+    return;
+  }
+
+  // Checkbox de filtro: el dropdown tiene id como "{prefix}-opts{FIELD}"
+  if(tgt.type==='checkbox'){
+    const dd = tgt.closest('.dropdown-content');
+    if(!dd) return;
+    const m = dd.id.match(/^(\w+)-opts(\w+)$/);
+    if(m) onFilterChange(m[1], m[2]);
+  }
+});
+
+/* ═════════════════════════════════════════════════════════════════════
+   INICIALIZACIÓN
+   ═════════════════════════════════════════════════════════════════════ */
+window.addEventListener('load', () => {
+  fetch(EXCEL_URL+'?v='+Date.now(), {cache:'no-store'})
+    .then(r => { if(!r.ok) throw 0; return r.arrayBuffer(); })
+    .then(procesar)
+    .catch(() => {
+      $('autoLoadMsg').style.display='none';
+      $('manualLoad').style.display='block';
+    });
+});
 </script>
 </body>
 </html>
