@@ -5,7 +5,6 @@
 <title>GASTO DE HERRAMIENTAS</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
 
 <style>
 :root{
@@ -370,17 +369,30 @@ function resetFilters(p){
 // ── Filter helpers ──
 function applyF(p, ignoreYear){
   const f=tabF[p];
-  return rawData.filter(d=>{
-    if(!ignoreYear && f.ANO.length && !f.ANO.includes(d['_Y'])) return false;
-    if(f.MES.length && !f.MES.includes(MN[d['_M']-1])) return false;
-    if(f.ZONA.length && !f.ZONA.includes(d.ZONA)) return false;
-    if(f.DIVISION.length && !f.DIVISION.includes(d.DIVISION)) return false;
-    if(f.CUENTA.length && !f.CUENTA.includes(d.CUENTA)) return false;
-    if(f.CLASIFICACION.length && !f.CLASIFICACION.includes(d.CLASIFICACION)) return false;
-    if(f.SISTEMA.length && !f.SISTEMA.includes(d.SISTEMA)) return false;
-    if(f.COMPONENTE.length && !f.COMPONENTE.includes(d.COMPONENTE)) return false;
-    return true;
-  });
+  // Pre-compute Set objects for O(1) lookup instead of O(n) Array.includes
+  const setAno = (!ignoreYear && f.ANO.length) ? new Set(f.ANO) : null;
+  const setMes = f.MES.length ? new Set(f.MES) : null;
+  const setZona = f.ZONA.length ? new Set(f.ZONA) : null;
+  const setDiv = f.DIVISION.length ? new Set(f.DIVISION) : null;
+  const setCta = f.CUENTA.length ? new Set(f.CUENTA) : null;
+  const setCla = f.CLASIFICACION.length ? new Set(f.CLASIFICACION) : null;
+  const setSis = f.SISTEMA.length ? new Set(f.SISTEMA) : null;
+  const setCom = f.COMPONENTE.length ? new Set(f.COMPONENTE) : null;
+  const out = [];
+  const n = rawData.length;
+  for(let i=0; i<n; i++){
+    const d = rawData[i];
+    if(setAno && !setAno.has(d['_Y'])) continue;
+    if(setMes && !setMes.has(MN[d['_M']-1])) continue;
+    if(setZona && !setZona.has(d.ZONA)) continue;
+    if(setDiv && !setDiv.has(d.DIVISION)) continue;
+    if(setCta && !setCta.has(d.CUENTA)) continue;
+    if(setCla && !setCla.has(d.CLASIFICACION)) continue;
+    if(setSis && !setSis.has(d.SISTEMA)) continue;
+    if(setCom && !setCom.has(d.COMPONENTE)) continue;
+    out.push(d);
+  }
+  return out;
 }
 
 function renderTab(tab){
@@ -457,21 +469,34 @@ function renderH(p){
           intersect:false,
           callbacks:{
             label:ctx=>{
-              // Solo mostrar año actual si tiene valor > 0
               if(ctx.datasetIndex===0 && !(ctx.raw>0)) return null;
               return `${ctx.dataset.label}: ${fP(ctx.raw)}`;
             }
           }
-        },
-        datalabels:{
-          display:ctx=>ctx.datasetIndex===0&&ctx.raw>0,
-          anchor:'end',align:'start',color:'#fff',
-          font:{size:9,weight:'bold'},
-          formatter:v=>v>0?'$'+(v/1000).toFixed(0)+'K':''
         }
       }
     },
-    plugins:[ChartDataLabels]
+    plugins:[{
+      id:'barLabels',
+      afterDatasetsDraw(chart){
+        const {ctx} = chart;
+        const meta = chart.getDatasetMeta(0);
+        if(!meta || meta.type!=='bar') return;
+        ctx.save();
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold 10px Segoe UI, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'top';
+        meta.data.forEach((bar, i) => {
+          const v = chart.data.datasets[0].data[i];
+          if(!(v>0)) return;
+          const label = '$'+(v/1000).toFixed(0)+'K';
+          // Dibuja dentro de la barra, en la parte superior (6px desde el tope)
+          ctx.fillText(label, bar.x, bar.y + 6);
+        });
+        ctx.restore();
+      }
+    }]
   });
 
   // Tabla: meses en filas (ENE→DIC), años en columnas DESC, total por año al final de cada columna
