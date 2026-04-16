@@ -463,19 +463,17 @@ function renderH(p){
     plugins:[ChartDataLabels]
   });
 
-  // Tabla: todos los años disponibles, años en filas DESC, meses en columnas DESC (DIC→ENE)
+  // Tabla: meses en filas (ENE→DIC), años en columnas DESC, total por año al final de cada columna
   const yearsDesc=[...new Set(noYearData.map(d=>d['_Y']))].filter(Boolean).sort((a,b)=>b-a);
-  const mDesc=[12,11,10,9,8,7,6,5,4,3,2,1];
+  const mAsc=[1,2,3,4,5,6,7,8,9,10,11,12];
   const head=$('h-tblHead'),body=$('h-tblBody'),foot=$('h-tblFoot');
-  head.innerHTML='<tr><th>AÑO</th>'+mDesc.map(m=>`<th>${MC[m-1]}</th>`).join('')+'<th>TOTAL</th></tr>';
-  body.innerHTML=yearsDesc.map(yr=>{
-    const vals=mDesc.map(m=>byYM[`${yr}-${m}`]||0);
-    const tot=vals.reduce((a,b)=>a+b,0);
-    return `<tr><td>${yr}</td>${vals.map(v=>`<td>${v>0?fP(v):'-'}</td>`).join('')}<td>${tot>0?fP(tot):'-'}</td></tr>`;
+  head.innerHTML='<tr><th>MES</th>'+yearsDesc.map(yr=>`<th>${yr}</th>`).join('')+'</tr>';
+  body.innerHTML=mAsc.map(m=>{
+    const vals=yearsDesc.map(yr=>byYM[`${yr}-${m}`]||0);
+    return `<tr><td>${MC[m-1]}</td>${vals.map(v=>`<td>${v>0?fP(v):'-'}</td>`).join('')}</tr>`;
   }).join('');
-  const ftv=mDesc.map(m=>yearsDesc.reduce((a,yr)=>a+(byYM[`${yr}-${m}`]||0),0));
-  const gt=ftv.reduce((a,b)=>a+b,0);
-  foot.innerHTML=`<tr><td>TOTAL</td>${ftv.map(v=>`<td>${v>0?fP(v):'-'}</td>`).join('')}<td>${gt>0?fP(gt):'-'}</td></tr>`;
+  const totByYear=yearsDesc.map(yr=>mAsc.reduce((a,m)=>a+(byYM[`${yr}-${m}`]||0),0));
+  foot.innerHTML=`<tr><td>TOTAL</td>${totByYear.map(v=>`<td>${v>0?fP(v):'-'}</td>`).join('')}</tr>`;
 }
 
 // ── DIVISIONES / COMPONENTES / DIVERSAS (genérica) ──
@@ -501,8 +499,8 @@ function renderSec(p, groupField, groupLabel, titleId){
     .map(([g,mD])=>({g,mD,total:Object.values(mD).reduce((a,b)=>a+b,0)}))
     .sort((a,b)=>b.total-a.total);
 
-  // Siempre mostrar los 12 meses completos, con meses DESC (DIC→ENE)
-  const mDesc=[12,11,10,9,8,7,6,5,4,3,2,1];
+  // Siempre mostrar los 12 meses completos ENE→DIC
+  const mDesc=[1,2,3,4,5,6,7,8,9,10,11,12];
   const pfxId=p+'-';
   const head=$(pfxId+'tblHead'),body=$(pfxId+'tblBody'),foot=$(pfxId+'tblFoot');
 
