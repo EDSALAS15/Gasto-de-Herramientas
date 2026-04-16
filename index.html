@@ -348,7 +348,7 @@ function buildF(p){
     const dd=$(`${p}-opts${fld}`); if(!dd) return;
     bindDD(p,fld);
     let vals=fld==='ANO'?allYearsG:fld==='MES'?MN:[...new Set(rawData.map(d=>d[fld]))].filter(v=>v).sort();
-    dd.innerHTML=vals.map(v=>`<label><input type="checkbox" value="${v}" onclick="hfc('${p}','${fld}')"> ${v}</label>`).join('');
+    dd.innerHTML=vals.map(v=>`<label><input type="checkbox" value="${v}" onchange="hfc('${p}','${fld}')"> ${v}</label>`).join('');
     const sel=new Set(tabF[p][fld]||[]);
     dd.querySelectorAll('input').forEach(cb=>cb.checked=sel.has(cb.value)||sel.has(Number(cb.value)));
     const ms=$(`${p}-ms${fld}`); if(ms) ms.innerText=tabF[p][fld].length?tabF[p][fld].join(', '):'Todos...';
