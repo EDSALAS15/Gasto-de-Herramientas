@@ -319,19 +319,95 @@ function bindDD(pfx,fld){
   });
 }
 
-// ── Load ──
+// ── Load (optimizado) ──
+// Cache global de valores únicos por campo — se calcula UNA SOLA VEZ
+let uniqueCache = {};
+
 function procesar(buf){
-  const wb=XLSX.read(buf,{type:'array',cellDates:true});
-  const raw=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
-  rawData=raw.map(r=>{
-    const n={};
-    for(const k in r) n[k.trim().toUpperCase()]=r[k];
-    if(n['FECHA CONTABLE']){const d=new Date(n['FECHA CONTABLE']);n['_Y']=d.getFullYear();n['_M']=d.getMonth()+1;}
-    ['CUENTA','CLASIFICACION','SISTEMA','COMPONENTE','DIVISION','ZONA'].forEach(f=>n[f]=(n[f]||'').toString().trim());
-    n['_IMP']=Math.abs(parseFloat(n['IMPORTE'])||0);
-    return n;
-  });
-  allYearsG=[...new Set(rawData.map(d=>d['_Y']))].filter(Boolean).sort();
+  const t0 = performance.now();
+  // Parse Excel con opciones ligeras: sin estilos, sin formulas, solo arrays de valores
+  const wb = XLSX.read(buf,{type:'array',cellDates:true,cellFormula:false,cellHTML:false,cellStyles:false,sheetStubs:false});
+  const sheet = wb.Sheets[wb.SheetNames[0]];
+  const range = XLSX.utils.decode_range(sheet['!ref']);
+
+  // Leer encabezados (fila 0)
+  const headers = [];
+  for(let c=range.s.c; c<=range.e.c; c++){
+    const cell = sheet[XLSX.utils.encode_cell({r:range.s.r, c})];
+    headers.push(cell ? String(cell.v).trim().toUpperCase() : '');
+  }
+  // Índices de columnas que nos interesan (más rápido que lookup por nombre)
+  const idx = {
+    FECHA:     headers.indexOf('FECHA CONTABLE'),
+    IMPORTE:   headers.indexOf('IMPORTE'),
+    CUENTA:    headers.indexOf('CUENTA'),
+    CLAS:      headers.indexOf('CLASIFICACION'),
+    SIS:       headers.indexOf('SISTEMA'),
+    COMP:      headers.indexOf('COMPONENTE'),
+    DIV:       headers.indexOf('DIVISION'),
+    ZONA:      headers.indexOf('ZONA')
+  };
+
+  // Recorrer celdas directamente — mucho más rápido que sheet_to_json
+  const out = new Array(range.e.r - range.s.r);
+  let outIdx = 0;
+  // Sets para acumular valores únicos en una sola pasada
+  const uCuenta = new Set(), uClas = new Set(), uSis = new Set(),
+        uComp  = new Set(), uDiv  = new Set(), uZona = new Set(), uYears = new Set();
+
+  for(let r=range.s.r+1; r<=range.e.r; r++){
+    const getC = c => { const k = XLSX.utils.encode_cell({r,c}); return sheet[k]; };
+
+    const fechaCell = getC(idx.FECHA);
+    let yr=0, mo=0;
+    if(fechaCell){
+      const d = fechaCell.v instanceof Date ? fechaCell.v : new Date(fechaCell.v);
+      if(!isNaN(d)){ yr=d.getFullYear(); mo=d.getMonth()+1; }
+    }
+    const impCell = getC(idx.IMPORTE);
+    const imp = impCell ? Math.abs(+impCell.v||0) : 0;
+
+    const getStr = c => { const cell = getC(c); return cell ? String(cell.v).trim() : ''; };
+    const cuenta = getStr(idx.CUENTA);
+    const clas   = getStr(idx.CLAS);
+    const sis    = getStr(idx.SIS);
+    const comp   = getStr(idx.COMP);
+    const divn   = getStr(idx.DIV);
+    const zona   = getStr(idx.ZONA);
+
+    // Acumular únicos (O(1) por Set.add)
+    if(yr)    uYears.add(yr);
+    if(cuenta) uCuenta.add(cuenta);
+    if(clas)   uClas.add(clas);
+    if(sis)    uSis.add(sis);
+    if(comp)   uComp.add(comp);
+    if(divn)   uDiv.add(divn);
+    if(zona)   uZona.add(zona);
+
+    out[outIdx++] = {
+      _Y: yr, _M: mo, _IMP: imp,
+      CUENTA: cuenta, CLASIFICACION: clas, SISTEMA: sis,
+      COMPONENTE: comp, DIVISION: divn, ZONA: zona
+    };
+  }
+  out.length = outIdx;
+  rawData = out;
+
+  // Ordenar unicos una sola vez y cachear
+  allYearsG = [...uYears].sort((a,b)=>a-b);
+  uniqueCache = {
+    ANO: allYearsG,
+    MES: MN,
+    ZONA: [...uZona].sort(),
+    DIVISION: [...uDiv].sort(),
+    CUENTA: [...uCuenta].sort(),
+    CLASIFICACION: [...uClas].sort(),
+    SISTEMA: [...uSis].sort(),
+    COMPONENTE: [...uComp].sort()
+  };
+
+  console.log('Excel parseado en', (performance.now()-t0).toFixed(0), 'ms —', rawData.length, 'filas');
+
   $('mainUI').style.display='block';
   $('uploadArea').style.display='none';
   ['h','d','c','v'].forEach(p=>buildF(p));
@@ -357,7 +433,8 @@ function buildF(p){
   ['ANO','MES','ZONA','DIVISION','CUENTA','CLASIFICACION','SISTEMA','COMPONENTE'].forEach(fld=>{
     const dd=$(`${p}-opts${fld}`); if(!dd) return;
     bindDD(p,fld);
-    let vals=fld==='ANO'?allYearsG:fld==='MES'?MN:[...new Set(rawData.map(d=>d[fld]))].filter(v=>v).sort();
+    // Usar cache en lugar de recalcular únicos recorriendo 75k filas cada vez
+    const vals = uniqueCache[fld] || [];
     dd.innerHTML=vals.map(v=>`<label><input type="checkbox" value="${v}"> ${v}</label>`).join('');
     const sel=new Set(tabF[p][fld]||[]);
     dd.querySelectorAll('input').forEach(cb=>cb.checked=sel.has(cb.value)||sel.has(Number(cb.value)));
