@@ -577,7 +577,7 @@ function renderH(p){
         meta.data.forEach((bar, i) => {
           const v = chart.data.datasets[0].data[i];
           if(!(v>0)) return;
-          const label = '$'+(v/1000).toFixed(0)+'K';
+          const label = '$'+Math.round(v).toLocaleString('es-MX');
           // Dibuja dentro de la barra, en la parte superior (6px desde el tope)
           ctx.fillText(label, bar.x, bar.y + 6);
         });
