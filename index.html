@@ -435,13 +435,13 @@ function renderH(p){
   const yMax=Math.max(...dCur,...dPrev,1)*1.25;
   charts['h']=new Chart(cv,{
     data:{labels,datasets:[
-      // Dataset 0: área año anterior — dibujado PRIMERO (order alto = fondo)
+      // Barras año actual — order:0 = se dibuja ENCIMA
+      {label:String(curYear),type:'bar',data:dCur,
+       backgroundColor:'#C10230',borderColor:'#a00220',borderWidth:1,order:0},
+      // Área año anterior — order:1 = se dibuja DEBAJO
       {label:String(prevYear),type:'line',data:dPrev,
        borderColor:'rgba(0,0,0,0)',backgroundColor:'rgba(180,180,180,0.32)',
-       fill:true,tension:0,pointRadius:0,pointHoverRadius:3,borderWidth:0,order:2},
-      // Dataset 1: barras año actual — dibujado ENCIMA (order bajo)
-      {label:String(curYear),type:'bar',data:dCur,
-       backgroundColor:'#C10230',borderColor:'#a00220',borderWidth:1,order:1}
+       fill:true,tension:0,pointRadius:0,pointHoverRadius:3,borderWidth:0,order:1}
     ]},
     options:{
       responsive:true,maintainAspectRatio:false,
@@ -458,13 +458,13 @@ function renderH(p){
           callbacks:{
             label:ctx=>{
               // Solo mostrar año actual si tiene valor > 0
-              if(ctx.datasetIndex===1 && !(ctx.raw>0)) return null;
+              if(ctx.datasetIndex===0 && !(ctx.raw>0)) return null;
               return `${ctx.dataset.label}: ${fP(ctx.raw)}`;
             }
           }
         },
         datalabels:{
-          display:ctx=>ctx.datasetIndex===1&&ctx.raw>0,
+          display:ctx=>ctx.datasetIndex===0&&ctx.raw>0,
           anchor:'end',align:'start',color:'#fff',
           font:{size:9,weight:'bold'},
           formatter:v=>v>0?'$'+(v/1000).toFixed(0)+'K':''
