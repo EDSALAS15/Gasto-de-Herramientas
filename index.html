@@ -465,7 +465,7 @@ function renderH(p){
         },
         datalabels:{
           display:ctx=>ctx.datasetIndex===1&&ctx.raw>0,
-          anchor:'end',align:'end',color:'#000',
+          anchor:'end',align:'start',color:'#fff',
           font:{size:9,weight:'bold'},
           formatter:v=>v>0?'$'+(v/1000).toFixed(0)+'K':''
         }
