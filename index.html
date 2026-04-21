@@ -504,7 +504,7 @@ function drawChart(dCur, dPrev, curYear, prevYear){
       scales: {
         x: { grid:{display:false} },
         y: { grid:{display:false}, beginAtZero:true, max:yMax,
-             ticks:{callback: v => '$'+(v/1000).toFixed(0)+'K'} }
+             ticks:{callback: v => '$'+Math.round(v).toLocaleString('es-MX')} }
       },
       plugins: {
         legend: { position:'bottom' },
