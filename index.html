@@ -168,7 +168,7 @@ TABS.forEach(t => {
    HELPERS
    ═════════════════════════════════════════════════════════════════════ */
 const $ = id => document.getElementById(id);
-const fP = v => (v && v>0) ? '$'+Math.round(v).toLocaleString('es-MX') : '-';
+const fP = v => (v && v!==0) ? (v<0 ? '-$'+Math.round(-v).toLocaleString('es-MX') : '$'+Math.round(v).toLocaleString('es-MX')) : '-';
 const tabByPrefix = p => TABS.find(t => t.prefix===p);
 const tabById = id => TABS.find(t => t.id===id);
 
@@ -288,7 +288,7 @@ function procesar(buf){
       if(!isNaN(d)){ yr=d.getFullYear(); mo=d.getMonth()+1; }
     }
     const ic = sheet[encode({r, c:iImp})];
-    const imp = ic ? Math.abs(+ic.v||0) : 0;
+    const imp = ic ? (+ic.v||0) : 0;
 
     const cta = (c=sheet[encode({r,c:iCta})]) => c?String(c.v).trim():'';
     // inline extraction
@@ -444,9 +444,10 @@ function renderH(p){
   const sumCur = dCur.reduce((a,b)=>a+b, 0);
   const sumPrevSame = ALL12.reduce((a,m,i) => a + (dCur[i]>0 ? (dPrev[i]||0) : 0), 0);
   const varPct = sumPrevSame>0 ? ((sumCur-sumPrevSame)/sumPrevSame)*100 : 0;
-  const nMes = dCur.filter(v => v>0).length || 1;
-  const maxVal = Math.max(...dCur.filter(v => v>0), 0);
-  const maxMes = maxVal>0 ? MC[dCur.indexOf(maxVal)] : '-';
+  const nMes = dCur.filter(v => v!==0).length || 1;
+  const dCurNonZero = dCur.filter(v => v!==0);
+  const maxVal = dCurNonZero.length ? Math.max(...dCurNonZero) : 0;
+  const maxMes = dCurNonZero.length ? MC[dCur.indexOf(maxVal)] : '-';
 
   // Pintar KPIs
   const arrow = varPct>0 ? '▲' : varPct<0 ? '▼' : '●';
@@ -478,16 +479,21 @@ function renderH(p){
   head.innerHTML = '<tr><th>MES</th>' + yearsDesc.map(y=>`<th>${y}</th>`).join('') + '</tr>';
   body.innerHTML = ALL12.map(m => {
     const vals = yearsDesc.map(y => byYM[`${y}-${m}`] || 0);
-    return `<tr><td>${MC[m-1]}</td>${vals.map(v => `<td>${v>0?fP(v):'-'}</td>`).join('')}</tr>`;
+    return `<tr><td>${MC[m-1]}</td>${vals.map(v => `<td>${v!==0?fP(v):'-'}</td>`).join('')}</tr>`;
   }).join('');
   const totByYear = yearsDesc.map(y => ALL12.reduce((a,m) => a + (byYM[`${y}-${m}`]||0), 0));
-  foot.innerHTML = `<tr><td>TOTAL</td>${totByYear.map(v => `<td>${v>0?fP(v):'-'}</td>`).join('')}</tr>`;
+  foot.innerHTML = `<tr><td>TOTAL</td>${totByYear.map(v => `<td>${v!==0?fP(v):'-'}</td>`).join('')}</tr>`;
 }
 
 // ── Gráfica del dashboard Herramientas ──
 function drawChart(dCur, dPrev, curYear, prevYear){
   if(charts.h){ charts.h.destroy(); charts.h=null; }
-  const yMax = Math.max(...dCur, ...dPrev, 1) * 1.08;
+  const allVals = [...dCur, ...dPrev];
+  const rawMax = Math.max(...allVals, 1);
+  const rawMin = Math.min(...allVals, 0);
+  const yMax = rawMax * 1.08;
+  // Si hay valores negativos, dar espacio debajo de 0 con un 8% de holgura
+  const yMin = rawMin < 0 ? rawMin * 1.08 : 0;
   charts.h = new Chart($('chartH'), {
     data: {
       labels: MC,
@@ -503,7 +509,7 @@ function drawChart(dCur, dPrev, curYear, prevYear){
       responsive:true, maintainAspectRatio:false,
       scales: {
         x: { grid:{display:false} },
-        y: { grid:{display:false}, beginAtZero:true, max:yMax,
+        y: { grid:{display:false}, min:yMin, max:yMax,
              ticks:{callback: v => '$'+Math.round(v).toLocaleString('es-MX')} }
       },
       plugins: {
@@ -512,7 +518,7 @@ function drawChart(dCur, dPrev, curYear, prevYear){
           mode:'index', intersect:false,
           callbacks: {
             label: ctx => {
-              if(ctx.datasetIndex===0 && !(ctx.raw>0)) return null;
+              if(ctx.datasetIndex===0 && (ctx.raw===0 || ctx.raw==null)) return null;
               return `${ctx.dataset.label}: ${fP(ctx.raw)}`;
             }
           }
@@ -529,12 +535,20 @@ function drawChart(dCur, dPrev, curYear, prevYear){
         ctx.fillStyle = '#fff';
         ctx.font = 'bold 10px Segoe UI, sans-serif';
         ctx.textAlign = 'center';
-        ctx.textBaseline = 'top';
         const data = chart.data.datasets[0].data;
         meta.data.forEach((bar, i) => {
           const v = data[i];
-          if(!(v>0)) return;
-          ctx.fillText('$'+Math.round(v).toLocaleString('es-MX'), bar.x, bar.y + 6);
+          if(v===0 || v==null) return;
+          const label = v<0 ? '-$'+Math.round(-v).toLocaleString('es-MX') : '$'+Math.round(v).toLocaleString('es-MX');
+          if(v>0){
+            // Barra positiva: etiqueta dentro, parte superior
+            ctx.textBaseline = 'top';
+            ctx.fillText(label, bar.x, bar.y + 6);
+          } else {
+            // Barra negativa (bonificación): etiqueta dentro, parte inferior
+            ctx.textBaseline = 'bottom';
+            ctx.fillText(label, bar.x, bar.base - 6);
+          }
         });
         ctx.restore();
       }
@@ -585,7 +599,7 @@ function renderSec(t){
 
   const footVals = ALL12.map(m => sorted.reduce((a,s) => a + s.arr[m], 0));
   const grand = footVals.reduce((a,b) => a+b, 0);
-  foot.innerHTML = `<tr><td>TOTAL</td>${footVals.map(v => `<td>${v>0?fP(v):'-'}</td>`).join('')}<td>${fP(grand)}</td></tr>`;
+  foot.innerHTML = `<tr><td>TOTAL</td>${footVals.map(v => `<td>${v!==0?fP(v):'-'}</td>`).join('')}<td>${fP(grand)}</td></tr>`;
 }
 
 /* ═════════════════════════════════════════════════════════════════════
