@@ -16,7 +16,7 @@ body{font-family:'Segoe UI',Tahoma,sans-serif;background:var(--gris);margin:0;di
 .header-logo{width:var(--side-w);background:#fefefe;display:flex;align-items:center;justify-content:center;padding:10px 16px;flex-shrink:0}
 .header-logo img{height:42px;object-fit:contain;width:100%}
 .header-title{flex:1;background:#E4002B;color:#fff;display:flex;align-items:center;justify-content:center;padding:14px 24px}
-.header-title h2{margin:0;font-size:16px;letter-spacing:.5px}
+.header-title h2{margin:0;font-size:16px;letter-spacing:.5px;text-transform:uppercase;font-weight:700}
 .app-body{display:flex;flex:1}
 .sidebar{width:var(--side-w);background:var(--side-bg);min-height:calc(100vh - 52px);flex-shrink:0;overflow-y:auto}
 .nav-group{border-bottom:1px solid #3a4a55}
@@ -51,14 +51,14 @@ body{font-family:'Segoe UI',Tahoma,sans-serif;background:var(--gris);margin:0;di
 .chart-title{font-size:13px;font-weight:700;color:#333;margin-bottom:6px;padding-left:2px;display:flex;align-items:center;gap:8px}
 .chart-title .ct-dash{font-size:11px;font-weight:600;background:#333F48;color:#fff;padding:2px 8px;border-radius:20px}
 .chart-title .ct-zone{font-size:11px;font-weight:600;background:#E4002B;color:#fff;padding:2px 8px;border-radius:20px}
-.chart-title .ct-info{font-size:11px;color:#888;font-weight:500}
+.chart-title .ct-info{font-size:11px;font-weight:600;background:#4A4847;color:#fff;padding:2px 8px;border-radius:20px}
 .chart-container{height:430px;position:relative;margin-top:10px}
 #uploadArea{text-align:center;padding:40px;border:2px dashed #E4002B;border-radius:8px}
 #uploadArea p{color:#666;font-size:13px}
 .tabla-wrap{margin-top:20px;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.1)}
 .tabla-toolbar{display:flex;align-items:center;justify-content:space-between;background:#333F48;color:#fff;padding:8px 14px;font-size:11px;font-weight:700}
-.btn-dl{background:#00882B;color:#fff;border:none;padding:4px 14px;border-radius:4px;cursor:pointer;font-size:10px;font-weight:700}
-.btn-dl:hover{background:#006820}
+.btn-dl{background:#227447;color:#fff;border:none;padding:4px 14px;border-radius:4px;cursor:pointer;font-size:10px;font-weight:700}
+.btn-dl:hover{background:#19593a}
 .tbl-h-scroll{overflow-x:auto;max-height:320px;overflow-y:auto}
 .tbl-gen{width:100%;border-collapse:collapse;font-family:'Segoe UI',sans-serif}
 .tbl-gen thead th{background:#333F48;color:#fff;padding:6px 8px;text-align:center;white-space:nowrap;font-size:10px;position:sticky;top:0;z-index:2;border-right:1px solid #4a5a68}
@@ -218,7 +218,7 @@ function buildPanelHTML(t){
         <div class="tabla-wrap">
           <div class="tabla-toolbar">
             <span>GASTO POR AÑO Y MES — HERRAMIENTAS</span>
-            <button class="btn-dl" data-csv="h-tbl">&#11015; Descargar CSV</button>
+            <button class="btn-dl" data-csv="h-tbl">&#11015; Descargar Excel</button>
           </div>
           <div class="tbl-h-scroll">
             <table class="tbl-gen" id="h-tbl">
@@ -235,7 +235,7 @@ function buildPanelHTML(t){
       <div class="tabla-wrap">
         <div class="tabla-toolbar">
           <span id="${t.prefix}-tblTitulo">${t.label.toUpperCase()}</span>
-          <button class="btn-dl" data-csv="${t.prefix}-tbl">&#11015; Descargar CSV</button>
+          <button class="btn-dl" data-csv="${t.prefix}-tbl">&#11015; Descargar Excel</button>
         </div>
         <div class="${t.tableClass}">
           <table class="tbl-sec" id="${t.prefix}-tbl">
@@ -491,15 +491,15 @@ function drawChart(dCur, dPrev, curYear, prevYear){
   const allVals = [...dCur, ...dPrev];
   const rawMax = Math.max(...allVals, 1);
   const rawMin = Math.min(...allVals, 0);
-  const yMax = rawMax * 1.08;
-  // Si hay valores negativos, dar espacio debajo de 0 con un 8% de holgura
-  const yMin = rawMin < 0 ? rawMin * 1.08 : 0;
+  const yMax = rawMax * 1.12;
+  // Si hay valores negativos, dar espacio debajo de 0 con un 12% de holgura
+  const yMin = rawMin < 0 ? rawMin * 1.12 : 0;
   charts.h = new Chart($('chartH'), {
     data: {
       labels: MC,
       datasets: [
         { label: String(curYear),  type:'bar', data:dCur,
-          backgroundColor:'#C10230', borderColor:'#a00220', borderWidth:1, order:0 },
+          backgroundColor:'#880015', borderColor:'#5d000e', borderWidth:1, order:0 },
         { label: String(prevYear), type:'line', data:dPrev,
           borderColor:'rgba(0,0,0,0)', backgroundColor:'rgba(180,180,180,0.32)',
           fill:true, tension:0, pointRadius:0, pointHoverRadius:3, borderWidth:0, order:1 }
@@ -532,7 +532,7 @@ function drawChart(dCur, dPrev, curYear, prevYear){
         const meta = chart.getDatasetMeta(0);
         if(!meta || meta.type!=='bar') return;
         ctx.save();
-        ctx.fillStyle = '#fff';
+        ctx.fillStyle = '#000';
         ctx.font = 'bold 10px Segoe UI, sans-serif';
         ctx.textAlign = 'center';
         const data = chart.data.datasets[0].data;
@@ -541,13 +541,13 @@ function drawChart(dCur, dPrev, curYear, prevYear){
           if(v===0 || v==null) return;
           const label = v<0 ? '-$'+Math.round(-v).toLocaleString('es-MX') : '$'+Math.round(v).toLocaleString('es-MX');
           if(v>0){
-            // Barra positiva: etiqueta dentro, parte superior
-            ctx.textBaseline = 'top';
-            ctx.fillText(label, bar.x, bar.y + 6);
-          } else {
-            // Barra negativa (bonificación): etiqueta dentro, parte inferior
+            // Barra positiva: etiqueta EXTERIOR encima de la barra
             ctx.textBaseline = 'bottom';
-            ctx.fillText(label, bar.x, bar.base - 6);
+            ctx.fillText(label, bar.x, bar.y - 4);
+          } else {
+            // Barra negativa (bonificación): etiqueta EXTERIOR debajo de la barra
+            ctx.textBaseline = 'top';
+            ctx.fillText(label, bar.x, bar.y + 4);
           }
         });
         ctx.restore();
