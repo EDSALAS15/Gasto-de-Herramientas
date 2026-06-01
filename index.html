@@ -42,7 +42,7 @@ body{font-family:'Segoe UI',Tahoma,sans-serif;background:var(--gris);margin:0;di
 .dropdown-content.open{display:block}
 .btn-clear{background:var(--rojo);color:#fff;border:none;padding:2px 10px;cursor:pointer;border-radius:3px;font-size:9px;font-weight:700;height:20px}
 .kpi-row{display:flex;gap:12px;margin-bottom:12px}
-.kpi-card{flex:1;background:#f9f9f9;border:1px solid #e8e8e8;border-radius:10px;padding:12px 16px;display:flex;flex-direction:column;align-items:center;justify-content:space-between;box-shadow:0 2px 8px rgba(0,0,0,.06);min-height:90px;text-align:center}
+.kpi-card{flex:1;background:#FFFFFF;border:1px solid #e8e8e8;border-radius:10px;padding:12px 16px;display:flex;flex-direction:column;align-items:center;justify-content:space-between;box-shadow:0 2px 8px rgba(0,0,0,.06);min-height:90px;text-align:center}
 .kpi-label{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:#999;width:100%}
 .kpi-value{font-size:22px;font-weight:800;color:#333F48;line-height:1;flex:1;display:flex;align-items:center;justify-content:center;width:100%}
 .kpi-sub{font-size:10px;color:#888;text-align:center;width:100%}
@@ -612,16 +612,34 @@ function cambiarVista(tabId){
   renderTab(tabId);
 }
 
-function descargarCSV(tblId){
+function descargarExcel(tblId){
   const tbl = $(tblId);
   if(!tbl) return;
-  const csv = '﻿' + [...tbl.querySelectorAll('tr')].map(r =>
-    [...r.querySelectorAll('th,td')].map(c => '"'+c.textContent.trim().replace(/"/g,'""')+'"').join(',')
-  ).join('\n');
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(new Blob([csv], {type:'text/csv;charset=utf-8;'}));
-  a.download = tblId.replace('-','_')+'_datos.csv';
-  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  // Construir matriz [filas][celdas] desde la tabla HTML, convirtiendo montos a números
+  const aoa = [...tbl.querySelectorAll('tr')].map(tr =>
+    [...tr.querySelectorAll('th,td')].map(td => {
+      const txt = td.textContent.trim();
+      // "$1,234" o "-$1,234" → número
+      const m = txt.match(/^(-?)\$([\d,]+)$/);
+      if(m) return parseFloat(m[1] + m[2].replace(/,/g,''));
+      // Número puro con comas
+      if(/^-?[\d,]+$/.test(txt) && txt.length > 0) return parseFloat(txt.replace(/,/g,''));
+      return txt;
+    })
+  );
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  // Aplicar formato de moneda a celdas numéricas
+  Object.keys(ws).forEach(addr => {
+    if(addr[0]==='!') return;
+    const cell = ws[addr];
+    if(typeof cell.v === 'number'){
+      cell.t = 'n';
+      cell.z = '"$"#,##0;[Red]"-$"#,##0';
+    }
+  });
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Datos');
+  XLSX.writeFile(wb, tblId.replace('-','_')+'_datos.xlsx');
 }
 
 /* ═════════════════════════════════════════════════════════════════════
@@ -651,7 +669,7 @@ document.addEventListener('click', e => {
 
   // CSV download
   const csvBtn = tgt.closest('[data-csv]');
-  if(csvBtn){ descargarCSV(csvBtn.dataset.csv); return; }
+  if(csvBtn){ descargarExcel(csvBtn.dataset.csv); return; }
 
   // Multiselect toggle
   const ms = tgt.closest('.multiselect');
